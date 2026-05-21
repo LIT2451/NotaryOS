@@ -1,0 +1,26 @@
+# OS Files
+.DS_Store
+Thumbs.db
+
+# VS/dotnet files
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+[Bb]in/
+[Oo]bj/
+appsettings.Development.json
+
+# Node/Frontend files
+node_modules/
+dist/
+.env*.local
+.env.development
+.env.production
+
+# Build deploy files
+build_deploy/
+NotaryOS_Deploy.zip
+deploy/
+Deploy/
+*.zip
