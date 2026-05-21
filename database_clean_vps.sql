@@ -1,4 +1,4 @@
--- SQL EXPORT FOR WEBCC PRODUCTION (FULL & CLEAN - V3)
+-- SQL EXPORT FOR NOTARYOS PRODUCTION (FULL & CLEAN - V3)
 -- Created for VPS Deployment
 -- Admin Account: admin / 123456
 

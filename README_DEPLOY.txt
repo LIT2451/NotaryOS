@@ -1,4 +1,4 @@
-HƯỚNG DẪN TRIỂN KHAI WEBCC TRÊN WINDOWS VPS (IIS)
+HƯỚNG DẪN TRIỂN KHAI NOTARYOS TRÊN WINDOWS VPS (IIS)
 ==================================================
 
 Cấu trúc thư mục khuyên dùng: C:\NOTA\
@@ -15,12 +15,12 @@ BƯỚC 1: CÀI ĐẶT MÔI TRƯỜNG
 
 BƯỚC 2: CẤU HÌNH IIS (INTERNET INFORMATION SERVICES)
 1. Mở IIS Manager.
-2. Tạo một Website mới (ví dụ tên: WEBCC):
+2. Tạo một Website mới (ví dụ tên: NOTARYOS):
    - Physical Path: Trỏ vào thư mục 'C:\NOTA\FE'
    - Port: 80
    - Hostname: congchungtanmai.io.vn (nếu có tên miền)
 3. Thêm Virtual Application cho Backend:
-   - Chuột phải vào Website 'WEBCC' vừa tạo -> Chọn "Add Application".
+   - Chuột phải vào Website 'NOTARYOS' vừa tạo -> Chọn "Add Application".
    - Alias: Đặt đúng tên là 'api'
    - Physical Path: Trỏ vào thư mục 'C:\NOTA\BE'
    - Nhấn OK.

@@ -54,13 +54,13 @@ Hệ thống được xây dựng trên mô hình Client-Server hiện đại, b
 ```text
 NotaryOS/
 ├── NotaryOS.sln             # Giải pháp ứng dụng dotnet tổng thể
-├── WebCC.Backend/           # Mã nguồn Backend Web API (C#)
+├── NotaryOS.Backend/           # Mã nguồn Backend Web API (C#)
 │   ├── Controllers/         # Các API Endpoint nghiệp vụ
 │   ├── Data/                # DbContext, Seeder khởi tạo dữ liệu mặc định
 │   ├── Models/              # Lớp đối tượng thực thể cơ sở dữ liệu
 │   └── Services/            # Dịch vụ xử lý Logic (Audit, Xuất PDF/Excel)
-├── WebCC.Backend.Tests/     # Dự án Kiểm thử tự động (Unit Tests)
-├── webcc-frontend/          # Mã nguồn ứng dụng giao diện khách (React + Vite)
+├── NotaryOS.Backend.Tests/     # Dự án Kiểm thử tự động (Unit Tests)
+├── notaryos-frontend/          # Mã nguồn ứng dụng giao diện khách (React + Vite)
 │   ├── src/components/      # Các thành phần giao diện (Dashboard, Form, Table...)
 │   └── src/services/        # Trình gọi API kết nối Backend
 └── database_clean_vps.sql   # Script khởi tạo cơ sở dữ liệu gốc sạch cho VPS
