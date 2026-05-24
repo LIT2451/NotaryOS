@@ -462,7 +462,15 @@ public class InvoicesController : ControllerBase
         
         var totalAmount = invoices.Sum(i => i.Amount);
         var totalCount = invoices.Count;
-        var uniqueClients = invoices.Select(i => i.ClientIdNumber).Distinct().Count();
+        // Đếm số khách hàng duy nhất:
+        // - Nếu có CCCD/CMND → dùng CCCD làm key (chính xác nhất)
+        // - Nếu không có CCCD → dùng ClientName làm key (tránh null gộp lại)
+        var uniqueClients = invoices
+            .Select(i => string.IsNullOrWhiteSpace(i.ClientIdNumber)
+                ? $"name:{i.ClientName?.Trim().ToLower() ?? "unknown"}"
+                : $"id:{i.ClientIdNumber.Trim()}")
+            .Distinct()
+            .Count();
 
         var countByService = invoices
             .Where(i => i.ServiceType != null)
