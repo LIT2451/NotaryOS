@@ -7,12 +7,14 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  // Đọc token từ sessionStorage - tự xóa khi đóng tab
+  const token = sessionStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
+
 
 export const login = (data: unknown) => api.post('/auth/login', data);
 export const register = (data: unknown) => api.post('/auth/register', data);

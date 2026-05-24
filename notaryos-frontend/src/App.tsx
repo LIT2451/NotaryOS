@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { HubConnectionBuilder, HubConnection, HubConnectionState } from '@microsoft/signalr';
 import toast, { Toaster } from 'react-hot-toast';
 
@@ -34,14 +34,27 @@ import ServiceManagementView from './components/ServiceManagementView';
 import RoleManagementView from './components/RoleManagementView';
 import ProfileView from './components/ProfileView';
 import InitInvoiceNumberView from './components/InitInvoiceNumberView';
+import { useSessionSecurity } from './hooks/useSessionSecurity';
 
 import './App.css';
 
 function App() {
+  // Kiểm tra token trong sessionStorage - nếu không có (tab mới/đóng tab) thì logout
   const [user, setUser] = useState<User | null>(() => {
+    const token = sessionStorage.getItem('token');
     const saved = localStorage.getItem('user');
+    // Nếu có user info nhưng không có token trong sessionStorage => đã đóng tab trước đó
+    if (saved && !token) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('activeTab');
+      return null;
+    }
     return saved ? JSON.parse(saved) : null;
   });
+
+  const [showInactivityWarning, setShowInactivityWarning] = useState(false);
+  const [warningCountdown, setWarningCountdown] = useState(60);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const savedTab = localStorage.getItem('activeTab') as TabType;
@@ -298,7 +311,8 @@ function App() {
       } else {
         const res = await login(authData);
         const userData = res.data.user;
-        localStorage.setItem('token', res.data.token);
+        // Lưu token vào sessionStorage (tự xóa khi đóng tab)
+        sessionStorage.setItem('token', res.data.token);
         localStorage.setItem('user', JSON.stringify(userData));
         setUser(userData);
         setActiveTab('dashboard');
@@ -312,13 +326,47 @@ function App() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback((reason?: string) => {
+    sessionStorage.removeItem('token');
     localStorage.clear();
     setUser(null);
     setInvoices([]);
     setStats({ totalAmount: 0, totalCount: 0, uniqueClients: 0, countByService: [] });
+    setShowInactivityWarning(false);
+    if (countdownRef.current) clearInterval(countdownRef.current);
     setActiveTab('login');
-  };
+    if (reason === 'inactivity') {
+      setTimeout(() => showError('Phiên hết hạn', 'Bạn đã không hoạt động trong 30 phút. Vui lòng đăng nhập lại.'), 100);
+    } else if (reason === 'tab_closed') {
+      setTimeout(() => showError('Phiên đã kết thúc', 'Phiên làm việc đã kết thúc. Vui lòng đăng nhập lại.'), 100);
+    }
+  }, []);
+
+  const handleInactivityWarning = useCallback(() => {
+    setShowInactivityWarning(true);
+    setWarningCountdown(60);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      setWarningCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useSessionSecurity({
+    isLoggedIn: !!user,
+    onLogout: () => handleLogout('inactivity'),
+    onWarning: handleInactivityWarning,
+  });
+
+  const dismissWarning = useCallback(() => {
+    setShowInactivityWarning(false);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+  }, []);
 
   const handleCreateInvoice = async (event: React.FormEvent, frontFile?: File | null, backFile?: File | null) => {
     event.preventDefault();
@@ -448,6 +496,27 @@ function App() {
   return (
     <div className="app-container">
       <Toaster position="top-right" />
+
+      {/* Modal cảnh báo hết phiên */}
+      {showInactivityWarning && (
+        <div className="inactivity-overlay">
+          <div className="inactivity-modal">
+            <div className="inactivity-icon">⚠️</div>
+            <h2>Phiên sắp hết hạn</h2>
+            <p>Bạn không hoạt động trong một thời gian dài.</p>
+            <p>Hệ thống sẽ tự động đăng xuất sau <strong>{warningCountdown}s</strong></p>
+            <div className="inactivity-progress">
+              <div
+                className="inactivity-progress-bar"
+                style={{ width: `${(warningCountdown / 60) * 100}%` }}
+              />
+            </div>
+            <button className="btn btn-primary" onClick={dismissWarning}>
+              Tiếp tục làm việc
+            </button>
+          </div>
+        </div>
+      )}
       
       <Navbar
         activeTab={activeTab}
