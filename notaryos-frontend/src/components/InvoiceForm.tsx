@@ -76,26 +76,35 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, ha
     }
   }, [serviceTypes]);
 
-  // Tự động lấy số hợp đồng tiếp theo khi có serviceTypeId
-  useEffect(() => {
-    if (createForm.serviceTypeId && createForm.serviceTypeId > 0) {
-      // Nếu đã có invoiceNumber (như được truyền từ màn Khởi tạo) và serviceTypeId chưa hề thay đổi từ lúc mount, thì bỏ qua việc overwrite
-      if (createForm.invoiceNumber && prevServiceTypeIdRef.current === createForm.serviceTypeId) {
-        return;
-      }
-      
-      prevServiceTypeIdRef.current = createForm.serviceTypeId;
+  const [fetchingNumber, setFetchingNumber] = useState(false);
 
-      getNextInvoiceNumber(createForm.serviceTypeId)
-        .then(res => {
-          if (res.data && res.data.nextNumber) {
-            setCreateForm(prev => ({ ...prev, invoiceNumber: res.data.nextNumber }));
-            setIsFirstInvoice(res.data.isFirst || false);
-          }
-        })
-        .catch(err => console.error("Error fetching next number:", err));
+  // Tự động lấy số hợp đồng tiếp theo:
+  // - Khi đổi loại dịch vụ
+  // - Khi refreshTrigger thay đổi (SignalR báo có hóa đơn mới từ người khác)
+  useEffect(() => {
+    if (!createForm.serviceTypeId || createForm.serviceTypeId <= 0) return;
+
+    // Nếu đã có invoiceNumber VÀ serviceTypeId chưa thay đổi VÀ không có refresh trigger mới
+    // thì bỏ qua (trường hợp khởi tạo số thủ công từ màn InitInvoiceNumber)
+    const serviceTypeChanged = prevServiceTypeIdRef.current !== createForm.serviceTypeId;
+    if (createForm.invoiceNumber && !serviceTypeChanged && refreshTrigger === 0) {
+      return;
     }
+
+    prevServiceTypeIdRef.current = createForm.serviceTypeId;
+    setFetchingNumber(true);
+
+    getNextInvoiceNumber(createForm.serviceTypeId)
+      .then(res => {
+        if (res.data && res.data.nextNumber) {
+          setCreateForm(prev => ({ ...prev, invoiceNumber: res.data.nextNumber }));
+          setIsFirstInvoice(res.data.isFirst || false);
+        }
+      })
+      .catch(err => console.error('Error fetching next number:', err))
+      .finally(() => setFetchingNumber(false));
   }, [createForm.serviceTypeId, refreshTrigger]);
+
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = event.target.files?.[0];
@@ -151,19 +160,42 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, ha
     { label: 'Số hợp đồng', required: true, node: (() => {
       const isEditable = isFirstInvoice;
       return (
-        <input 
-          readOnly={!isEditable}
-          className="underline-input" 
-          style={!isEditable ? { color: 'var(--text-muted)', backgroundColor: 'transparent', cursor: 'not-allowed' } : { fontWeight: 700, color: 'var(--primary)' }}
-          value={createForm.invoiceNumber}
-          onChange={(e) => {
-            if (isEditable) {
-              setCreateForm({ ...createForm, invoiceNumber: e.target.value });
-            }
-          }}
-          placeholder={isEditable ? "Nhập số hợp đồng" : "Hệ thống tự động cấp số"} />
+        <div style={{ position: 'relative' }}>
+          <input
+            readOnly={!isEditable}
+            className="underline-input"
+            style={{
+              ...(fetchingNumber
+                ? { color: 'var(--ink-muted)', fontStyle: 'italic' }
+                : !isEditable
+                  ? { color: 'var(--ink)', fontWeight: 700, cursor: 'not-allowed' }
+                  : { fontWeight: 700, color: 'var(--primary)' }
+              ),
+              paddingRight: fetchingNumber ? '80px' : undefined,
+              backgroundColor: 'transparent',
+            }}
+            value={fetchingNumber ? 'Đang cập nhật...' : createForm.invoiceNumber}
+            onChange={(e) => {
+              if (isEditable && !fetchingNumber) {
+                setCreateForm({ ...createForm, invoiceNumber: e.target.value });
+              }
+            }}
+            placeholder={isEditable ? 'Nhập số hợp đồng' : 'Hệ thống tự động cấp số'}
+          />
+          {fetchingNumber && (
+            <span style={{
+              position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+              fontSize: '11px', color: 'var(--primary)', fontWeight: 600,
+              display: 'flex', alignItems: 'center', gap: '4px',
+            }}>
+              <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>↻</span>
+              Realtime
+            </span>
+          )}
+        </div>
       );
     })()},
+
     { label: 'Dịch vụ cụ thể', required: true, node: (
       <select className="underline-input underline-select" value={createForm.serviceTypeId}
         onChange={(e) => setCreateForm({ ...createForm, serviceTypeId: Number(e.target.value) })}>

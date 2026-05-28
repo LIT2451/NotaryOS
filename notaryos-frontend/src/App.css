@@ -2884,7 +2884,13 @@ select.dash-date-input {
   animation: pulse-icon 1.5s ease-in-out infinite;
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 @keyframes pulse-icon {
+
   0%, 100% { transform: scale(1); }
   50%       { transform: scale(1.12); }
 }

@@ -8,6 +8,7 @@ using NotaryOS.Backend.Hubs;
 using NotaryOS.Backend.Models;
 using NotaryOS.Backend.Services;
 using NotaryOS.Backend.Filters;
+using System.Collections.Concurrent;
 
 namespace NotaryOS.Backend.Controllers;
 
@@ -16,6 +17,12 @@ namespace NotaryOS.Backend.Controllers;
 [ApiController]
 public class InvoicesController : ControllerBase
 {
+    // ── Lock per prefix để tránh race condition khi nhiều người nhập đồng thời ──
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _numberLocks = new();
+
+    private static SemaphoreSlim GetPrefixLock(string prefix)
+        => _numberLocks.GetOrAdd(prefix, _ => new SemaphoreSlim(1, 1));
+
     private readonly AppDbContext _context;
     private readonly IHubContext<InvoiceHub> _hubContext;
     private readonly ILogger<InvoicesController> _logger;
@@ -228,22 +235,22 @@ public class InvoicesController : ControllerBase
     public async Task<ActionResult<Invoice>> PostInvoice([FromForm] CreateInvoiceRequest request, IFormFile? idCardFront, IFormFile? idCardBack)
     {
         var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-        
+
         var serviceType = await _context.ServiceTypes.FindAsync(request.ServiceTypeId);
         if (serviceType == null) return BadRequest("Loại dịch vụ không tồn tại.");
 
         var prefix = serviceType.Category switch
         {
             "ChungThuc" => "CT",
-            "SaoY" => "SY",
-            _ => "CC"
+            "SaoY"      => "SY",
+            _           => "CC"
         };
-        
-        var notaryDate = request.NotaryDate ?? DateTime.Now;
+
+        var notaryDate  = request.NotaryDate ?? DateTime.Now;
         var currentYear = notaryDate.Year;
-        
+
         string yearPrefix;
-        int digitCount = 6;
+        int    digitCount = 6;
 
         if (prefix == "SY")
         {
@@ -255,62 +262,74 @@ public class InvoicesController : ControllerBase
             yearPrefix = $"{prefix}-{currentYear}-";
         }
 
-        string invoiceNumber;
-        if (!string.IsNullOrWhiteSpace(request.InvoiceNumber))
-        {
-            var requestedNum = request.InvoiceNumber.Trim();
-            var existingInvoice = await _context.Invoices
-                .FirstOrDefaultAsync(i => i.InvoiceNumber == requestedNum);
+        // ── Bước 1: Upload ảnh TRƯỚC lock để không giữ lock quá lâu ──
+        string? frontPath = null;
+        string? backPath  = null;
+        if (idCardFront != null) frontPath = await SaveFileAsync(idCardFront);
+        if (idCardBack  != null) backPath  = await SaveFileAsync(idCardBack);
 
-            if (existingInvoice == null)
+        // ── Bước 2: Sinh số hợp đồng trong lock để tránh race condition ──
+        //    Chỉ cho phép khởi tạo số thủ công nếu là hóa đơn đầu tiên (isFirst)
+        Invoice invoice;
+        var semaphore = GetPrefixLock(yearPrefix);
+        await semaphore.WaitAsync();
+        try
+        {
+            string invoiceNumber;
+
+            bool hasAny = await _context.Invoices
+                .AnyAsync(i => i.InvoiceNumber.StartsWith(yearPrefix) && !i.IsDeleted);
+
+            // Chỉ cho phép dùng số do người dùng nhập nếu đây là hóa đơn ĐẦU TIÊN
+            // (trường hợp khởi tạo). Còn lại luôn tự sinh để tránh trùng lặp.
+            if (!hasAny && !string.IsNullOrWhiteSpace(request.InvoiceNumber))
             {
+                // Hóa đơn đầu tiên: dùng số người dùng nhập làm mốc khởi tạo
+                var requestedNum   = request.InvoiceNumber.Trim();
+                var existingRecord = await _context.Invoices
+                    .FirstOrDefaultAsync(i => i.InvoiceNumber == requestedNum);
+
+                if (existingRecord != null && existingRecord.IsDeleted)
+                {
+                    _context.Invoices.Remove(existingRecord);
+                    await _context.SaveChangesAsync();
+                }
+
                 invoiceNumber = requestedNum;
             }
             else
             {
-                if (existingInvoice.IsDeleted)
-                {
-                    _context.Invoices.Remove(existingInvoice);
-                    await _context.SaveChangesAsync();
-                    invoiceNumber = requestedNum;
-                }
-                else
-                {
-                    invoiceNumber = await GenerateInvoiceNumberAsync(yearPrefix, digitCount);
-                }
+                // Luôn tự sinh số — an toàn cho nhiều người nhập đồng thời
+                invoiceNumber = await GenerateInvoiceNumberAsync(yearPrefix, digitCount);
             }
+
+            invoice = new Invoice
+            {
+                InvoiceNumber = invoiceNumber,
+                ClientName    = request.ClientName,
+                ClientIdNumber = request.ClientIdNumber,
+                ClientEmail   = request.ClientEmail,
+                Amount        = request.Amount,
+                ServiceTypeId = request.ServiceTypeId,
+                NotaryDate    = request.NotaryDate ?? DateTime.Now,
+                BankName      = request.BankName,
+                BankAccount   = request.BankAccount,
+                IdCardFrontPath = frontPath,
+                IdCardBackPath  = backPath,
+                CreatedBy     = userId
+            };
+
+            _context.Invoices.Add(invoice);
+            await _context.SaveChangesAsync();
         }
-        else
+        finally
         {
-            invoiceNumber = await GenerateInvoiceNumberAsync(yearPrefix, digitCount);
+            semaphore.Release();
         }
-
-        var invoice = new Invoice
-        {
-            InvoiceNumber = invoiceNumber,
-            ClientName = request.ClientName,
-            ClientIdNumber = request.ClientIdNumber,
-            ClientEmail = request.ClientEmail,
-            Amount = request.Amount,
-            ServiceTypeId = request.ServiceTypeId,
-            NotaryDate = request.NotaryDate ?? DateTime.Now,
-            BankName = request.BankName,
-            BankAccount = request.BankAccount,
-            CreatedBy = userId
-        };
-
-        // Xử lý upload ảnh
-        if (idCardFront != null) invoice.IdCardFrontPath = await SaveFileAsync(idCardFront);
-        if (idCardBack != null) invoice.IdCardBackPath = await SaveFileAsync(idCardBack);
-
-        _context.Invoices.Add(invoice);
-        await _context.SaveChangesAsync();
 
         _logger.LogInformation(
             "Invoice created: id={InvoiceId}, number={InvoiceNumber}, by={UserId}",
-            invoice.Id,
-            invoice.InvoiceNumber,
-            userId);
+            invoice.Id, invoice.InvoiceNumber, userId);
 
         await BroadcastInvoiceChanged("created", invoice.Id);
 

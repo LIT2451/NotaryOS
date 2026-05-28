@@ -377,19 +377,31 @@ function App() {
         const val = (createForm as any)[key];
         formData.append(key, val === null || val === undefined ? '' : val.toString());
       });
-      
+
       if (frontFile) formData.append('idCardFront', frontFile);
       if (backFile) formData.append('idCardBack', backFile);
 
-      await createInvoice(formData);
-      showSuccess('Đã lưu', 'Hóa đơn mới đã được tạo thành công.');
+      // Backend trả về invoice với số hợp đồng thực tế đã được cấp (tránh race condition)
+      const res = await createInvoice(formData);
+      const savedInvoice = res.data;
+      const assignedNumber = savedInvoice?.invoiceNumber || '';
+
+      showSuccess(
+        'Đã lưu hóa đơn',
+        assignedNumber
+          ? `Số hợp đồng được cấp: ${assignedNumber}`
+          : 'Hóa đơn mới đã được tạo thành công.'
+      );
+
+      // Reset form — giữ lại serviceTypeId hiện tại để InvoiceForm tự fetch số tiếp theo
+      const currentServiceTypeId = createForm.serviceTypeId;
       setCreateForm({
-        invoiceNumber: '',
+        invoiceNumber: '',   // Xóa để InvoiceForm trigger fetch số mới
         clientName: '',
         clientIdNumber: '',
         clientEmail: '',
         amount: 0,
-        serviceTypeId: 1,
+        serviceTypeId: currentServiceTypeId,
         notaryDate: toDateInputValue(new Date().toISOString()),
         bankName: '',
         bankAccount: '',
@@ -403,6 +415,7 @@ function App() {
       setLoading(false);
     }
   };
+
 
   const startEditInvoice = (invoice: Invoice) => {
     setEditingInvoiceId(invoice.id);
