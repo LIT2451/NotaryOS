@@ -3,7 +3,7 @@ import { MagnifyingGlass, PencilSimple, Trash, FloppyDisk, X, Receipt, ArrowsCou
 import type { Invoice, InvoicePayload } from '../types';
 import { SERVICE_TYPES } from '../constants';
 
-const BANK_LIST = [
+const FALLBACK_BANK_LIST = [
   'Vietcombank', 'VietinBank', 'BIDV', 'Agribank', 'Techcombank', 'MB Bank', 'ACB', 'VPBank',
   'Sacombank', 'HDBank', 'TPBank', 'SHB', 'SeABank', 'LienVietPostBank', 'VIB', 'MSB',
   'OCB', 'Eximbank', 'Nam A Bank', 'Bac A Bank', 'PVcomBank', 'ABBank', 'KienLong Bank',
@@ -32,6 +32,7 @@ type InvoiceTableProps = {
   endDate: string;
   setEndDate: (date: string) => void;
   serviceTypes: any[];
+  banks?: any[];
   hasPermission: (permission: string) => boolean;
   currentUserId: number;
   onExportExcel?: () => void;
@@ -84,6 +85,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
   endDate,
   setEndDate,
   serviceTypes,
+  banks = [],
   hasPermission,
   currentUserId,
   onExportExcel,
@@ -92,6 +94,10 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [subTab, setSubTab] = useState<'active' | 'deleted'>('active');
+  
+  const bankList = React.useMemo(() => {
+    return banks && banks.length > 0 ? banks.map((b: any) => b.bankName) : FALLBACK_BANK_LIST;
+  }, [banks]);
 
   // Reset to page 1 when search, filters, or subTab changes
   useEffect(() => {
@@ -250,7 +256,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
               onChange={(e) => setFilterBank(e.target.value)}
             >
               <option value="all">Tất cả ngân hàng</option>
-              {BANK_LIST.map((bank) => (
+              {bankList.map((bank) => (
                 <option key={bank} value={bank}>{bank}</option>
               ))}
             </select>
@@ -388,7 +394,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
                                 value={editForm.bankName || ''}
                                 onChange={(e) => setEditForm({ ...editForm, bankName: e.target.value })}>
                                 <option value="">-- Ngân hàng --</option>
-                                {BANK_LIST.map((bank) => (
+                                {bankList.map((bank) => (
                                   <option key={bank} value={bank}>{bank}</option>
                                 ))}
                               </select>

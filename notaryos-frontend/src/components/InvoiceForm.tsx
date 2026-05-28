@@ -3,7 +3,7 @@ import type { InvoicePayload } from '../types';
 import { Camera, X } from '@phosphor-icons/react';
 import { getNextInvoiceNumber } from '../services/api';
 
-const BANK_LIST = [
+const FALLBACK_BANK_LIST = [
   'Vietcombank',
   'VietinBank',
   'BIDV',
@@ -41,13 +41,18 @@ type InvoiceFormProps = {
   handleCreateInvoice: (event: React.FormEvent, frontFile?: File | null, backFile?: File | null) => void;
   loading: boolean;
   serviceTypes: any[];
+  banks?: any[];
   refreshTrigger?: number;
   userRole?: string;
 };
 
-const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, handleCreateInvoice, loading, serviceTypes, refreshTrigger, userRole }) => {
+const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, handleCreateInvoice, loading, serviceTypes, banks = [], refreshTrigger, userRole }) => {
   const [idCardFrontImage, setIdCardFrontImage] = useState<string | null>(null);
   const [idCardBackImage, setIdCardBackImage] = useState<string | null>(null);
+  
+  const bankList = useMemo(() => {
+    return banks && banks.length > 0 ? banks.map((b: any) => b.bankName) : FALLBACK_BANK_LIST;
+  }, [banks]);
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
   const [isFirstInvoice, setIsFirstInvoice] = useState(false);
@@ -244,7 +249,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, ha
         value={createForm.bankName || ''}
         onChange={(e) => setCreateForm({ ...createForm, bankName: e.target.value })}>
         <option value="">-- Chọn ngân hàng --</option>
-        {BANK_LIST.map((bank) => (
+        {bankList.map((bank) => (
           <option key={bank} value={bank}>{bank}</option>
         ))}
       </select>

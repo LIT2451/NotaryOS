@@ -6,7 +6,7 @@ import {
   UserCircle,
 } from '@phosphor-icons/react';
 
-export type TabType = 'home' | 'dashboard' | 'create' | 'init-number' | 'history' | 'audit' | 'accounts' | 'services' | 'roles' | 'login' | 'register' | 'profile';
+export type TabType = 'home' | 'dashboard' | 'create' | 'init-number' | 'history' | 'audit' | 'accounts' | 'services' | 'roles' | 'banks' | 'login' | 'register' | 'profile';
 
 interface NavbarProps {
   activeTab: TabType;
@@ -48,6 +48,7 @@ const Navbar: React.FC<NavbarProps> = ({
     ...(hasPermission('Invoices.ViewAll') ? [{ id: 'audit', label: 'Nhật ký' }] : []),
     ...(hasPermission('Users.Manage') ? [{ id: 'accounts', label: 'Tài khoản' }] : []),
     ...(hasPermission('ServiceTypes.Manage') ? [{ id: 'services', label: 'Dịch vụ' }] : []),
+    ...(hasPermission('Banks.Manage') ? [{ id: 'banks', label: 'Ngân hàng' }] : []),
     ...(hasPermission('Roles.Manage') ? [{ id: 'roles', label: 'Vai trò' }] : []),
   ];
 

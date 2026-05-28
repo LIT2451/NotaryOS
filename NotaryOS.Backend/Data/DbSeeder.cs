@@ -23,7 +23,8 @@ public static class DbSeeder
             new Permission { Id = "Stats.View", PermissionName = "Xem thống kê", Description = "Xem dashboard thống kê doanh thu." },
             new Permission { Id = "Users.Manage", PermissionName = "Quản lý nhân viên", Description = "Thêm, sửa, xóa, đặt lại mật khẩu nhân viên." },
             new Permission { Id = "Roles.Manage", PermissionName = "Quản lý vai trò", Description = "Quản lý Role và gán quyền." },
-            new Permission { Id = "ServiceTypes.Manage", PermissionName = "Quản lý loại dịch vụ", Description = "Thêm, sửa, xóa loại dịch vụ." }
+            new Permission { Id = "ServiceTypes.Manage", PermissionName = "Quản lý loại dịch vụ", Description = "Thêm, sửa, xóa loại dịch vụ." },
+            new Permission { Id = "Banks.Manage", PermissionName = "Quản lý ngân hàng", Description = "Thêm, sửa, xóa danh sách ngân hàng." }
         };
 
         // 1. Dọn dẹp: Xóa các quyền cũ không còn trong danh sách mới
@@ -117,6 +118,9 @@ public static class DbSeeder
         
         // 4. Seed Service Types if empty
         await SeedServiceTypesAsync(context);
+        
+        // 5. Seed Banks if empty
+        await SeedBanksAsync(context);
 
         Console.WriteLine("[SEEDER] RBAC Seed completed successfully.");
     }
@@ -145,5 +149,47 @@ public static class DbSeeder
         context.ServiceTypes.AddRange(serviceTypes);
         await context.SaveChangesAsync();
         Console.WriteLine($"[SEEDER] Added {serviceTypes.Count} sample service types.");
+    }
+
+    private static async Task SeedBanksAsync(AppDbContext context)
+    {
+        if (await context.Banks.AnyAsync()) return;
+
+        var banks = new List<Bank>
+        {
+            new Bank { BankName = "Vietcombank", Code = "VCB", Description = "Ngân hàng TMCP Ngoại thương Việt Nam" },
+            new Bank { BankName = "VietinBank", Code = "CTG", Description = "Ngân hàng TMCP Công thương Việt Nam" },
+            new Bank { BankName = "BIDV", Code = "BID", Description = "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam" },
+            new Bank { BankName = "Agribank", Code = "AGR", Description = "Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam" },
+            new Bank { BankName = "Techcombank", Code = "TCB", Description = "Ngân hàng TMCP Kỹ thương Việt Nam" },
+            new Bank { BankName = "MB Bank", Code = "MBB", Description = "Ngân hàng TMCP Quân đội" },
+            new Bank { BankName = "ACB", Code = "ACB", Description = "Ngân hàng TMCP Á Châu" },
+            new Bank { BankName = "VPBank", Code = "VPB", Description = "Ngân hàng TMCP Việt Nam Thịnh Vượng" },
+            new Bank { BankName = "Sacombank", Code = "STB", Description = "Ngân hàng TMCP Sài Gòn Thương Tín" },
+            new Bank { BankName = "HDBank", Code = "HDB", Description = "Ngân hàng TMCP Phát triển Thành phố Hồ Chí Minh" },
+            new Bank { BankName = "TPBank", Code = "TPB", Description = "Ngân hàng TMCP Tiên Phong" },
+            new Bank { BankName = "SHB", Code = "SHB", Description = "Ngân hàng TMCP Sài Gòn - Hà Nội" },
+            new Bank { BankName = "SeABank", Code = "SEAB", Description = "Ngân hàng TMCP Đông Nam Á" },
+            new Bank { BankName = "LienVietPostBank", Code = "LPB", Description = "Ngân hàng TMCP Bưu điện Liên Việt" },
+            new Bank { BankName = "VIB", Code = "VIB", Description = "Ngân hàng TMCP Quốc tế Việt Nam" },
+            new Bank { BankName = "MSB", Code = "MSB", Description = "Ngân hàng TMCP Hàng Hải Việt Nam" },
+            new Bank { BankName = "OCB", Code = "OCB", Description = "Ngân hàng TMCP Phương Đông" },
+            new Bank { BankName = "Eximbank", Code = "EIB", Description = "Ngân hàng TMCP Xuất Nhập Khẩu Việt Nam" },
+            new Bank { BankName = "Nam A Bank", Code = "NAB", Description = "Ngân hàng TMCP Nam Á" },
+            new Bank { BankName = "Bac A Bank", Code = "BAB", Description = "Ngân hàng TMCP Bắc Á" },
+            new Bank { BankName = "PVcomBank", Code = "PVC", Description = "Ngân hàng TMCP Đại Chúng Việt Nam" },
+            new Bank { BankName = "ABBank", Code = "ABB", Description = "Ngân hàng TMCP An Bình" },
+            new Bank { BankName = "KienLong Bank", Code = "KLB", Description = "Ngân hàng TMCP Kiên Long" },
+            new Bank { BankName = "Saigonbank", Code = "SGB", Description = "Ngân hàng TMCP Sài Gòn Công Thương" },
+            new Bank { BankName = "VietABank", Code = "VAB", Description = "Ngân hàng TMCP Việt Á" },
+            new Bank { BankName = "NCB", Code = "NCB", Description = "Ngân hàng TMCP Quốc Dân" },
+            new Bank { BankName = "PGBank", Code = "PGB", Description = "Ngân hàng TMCP Thịnh vượng và Phát triển" },
+            new Bank { BankName = "BaoViet Bank", Code = "BVB", Description = "Ngân hàng TMCP Bảo Việt" },
+            new Bank { BankName = "DongA Bank", Code = "DAB", Description = "Ngân hàng TMCP Đông Á" }
+        };
+
+        context.Banks.AddRange(banks);
+        await context.SaveChangesAsync();
+        Console.WriteLine($"[SEEDER] Added {banks.Count} default banks.");
     }
 }

@@ -12,6 +12,7 @@ import {
   updateInvoice,
   getAuditLogs,
   getServiceTypes,
+  getBanks,
   exportExcel,
   exportPdf,
 } from './services/api';
@@ -31,6 +32,7 @@ import HomeView from './components/HomeView';
 import AuditLogView from './components/AuditLogView';
 import UserManagementView from './components/UserManagementView';
 import ServiceManagementView from './components/ServiceManagementView';
+import BankManagementView from './components/BankManagementView';
 import RoleManagementView from './components/RoleManagementView';
 import ProfileView from './components/ProfileView';
 import InitInvoiceNumberView from './components/InitInvoiceNumberView';
@@ -78,6 +80,7 @@ function App() {
   const [stats, setStats] = useState<Stats>({ totalAmount: 0, totalCount: 0, uniqueClients: 0, countByService: [] });
   const [prevStats, setPrevStats] = useState<Stats | null>(null);
   const [serviceTypes, setServiceTypes] = useState<any[]>([]);
+  const [banks, setBanks] = useState<any[]>([]);
   const [, setAuditLogs] = useState<AuditLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterServiceType, setFilterServiceType] = useState<number | 'all'>('all');
@@ -143,16 +146,18 @@ function App() {
         };
       }
 
-      const [invRes, statRes, servRes, prevStatRes] = await Promise.all([
+      const [invRes, statRes, servRes, prevStatRes, bankRes] = await Promise.all([
         getInvoices(params),
         getStats(params),
         getServiceTypes(),
-        prevParams ? getStats(prevParams) : Promise.resolve({ data: null })
+        prevParams ? getStats(prevParams) : Promise.resolve({ data: null }),
+        getBanks()
       ]);
       setInvoices(Array.isArray(invRes.data) ? invRes.data : []);
       setStats(statRes.data);
       setPrevStats(prevStatRes.data);
       setServiceTypes(Array.isArray(servRes.data) ? servRes.data : []);
+      setBanks(Array.isArray(bankRes.data) ? bankRes.data : []);
       setRefreshTrigger(prev => prev + 1);
       if (activeTab === 'audit') fetchAuditLogs();
     } catch (err: any) {
@@ -602,6 +607,7 @@ function App() {
                   handleCreateInvoice={handleCreateInvoice}
                   loading={loading}
                   serviceTypes={serviceTypes}
+                  banks={banks}
                   refreshTrigger={refreshTrigger}
                   userRole={user?.role}
                 />
@@ -638,6 +644,7 @@ function App() {
                   endDate={endDate}
                   setEndDate={setEndDate}
                   serviceTypes={serviceTypes}
+                  banks={banks}
                   hasPermission={hasPermission}
                   currentUserId={user?.id ?? 0}
                   onExportExcel={hasPermission('Invoices.Export') ? handleExportExcel : undefined}
@@ -657,6 +664,12 @@ function App() {
                 <ServiceManagementView onServiceChange={() => fetchData(false)} />
               )}
               {activeTab === 'services' && !hasPermission('ServiceTypes.Manage') && (
+                <DashboardView stats={stats} prevStats={prevStats} invoices={invoices} startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} onExportExcel={hasPermission('Invoices.Export') ? handleExportExcel : undefined} onExportPdf={hasPermission('Invoices.Export') ? handleExportPdf : undefined} />
+              )}
+              {activeTab === 'banks' && hasPermission('Banks.Manage') && (
+                <BankManagementView onBankChange={() => fetchData(false)} />
+              )}
+              {activeTab === 'banks' && !hasPermission('Banks.Manage') && (
                 <DashboardView stats={stats} prevStats={prevStats} invoices={invoices} startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} onExportExcel={hasPermission('Invoices.Export') ? handleExportExcel : undefined} onExportPdf={hasPermission('Invoices.Export') ? handleExportPdf : undefined} />
               )}
             </div>

@@ -42,4 +42,10 @@ export const createServiceType = (data: unknown) => api.post('/servicetypes', da
 export const updateServiceType = (id: number, data: unknown) => api.put(`/servicetypes/${id}`, data);
 export const deleteServiceType = (id: number) => api.delete(`/servicetypes/${id}`);
 
+// Banks Management (Admin)
+export const getBanks = () => api.get('/banks');
+export const createBank = (data: unknown) => api.post('/banks', data);
+export const updateBank = (id: number, data: unknown) => api.put(`/banks/${id}`, data);
+export const deleteBank = (id: number) => api.delete(`/banks/${id}`);
+
 export default api;
