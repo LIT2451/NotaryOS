@@ -19,6 +19,7 @@ export type Invoice = {
   bankName?: string;
   bankAccount?: string;
   createdBy?: number;
+  user?: { id: number; fullName?: string; username?: string };
   idCardFrontPath?: string;
   idCardBackPath?: string;
   isDeleted?: boolean;

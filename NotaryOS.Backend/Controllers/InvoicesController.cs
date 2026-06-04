@@ -208,7 +208,10 @@ public class InvoicesController : ControllerBase
         var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
         var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
 
-        var query = _context.Invoices.Include(i => i.ServiceType).AsQueryable();
+        var query = _context.Invoices
+            .Include(i => i.ServiceType)
+            .Include(i => i.User)
+            .AsQueryable();
 
         if (!canViewAll)
         {

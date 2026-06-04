@@ -314,6 +314,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
                   <th>Dịch vụ</th>
                   <th style={{ textAlign: 'right' }}>Số tiền</th>
                   <th>Ngân hàng</th>
+                  <th>Người tạo</th>
                   <th>Ngày</th>
                   <th style={{ textAlign: 'right' }}>Thao tác</th>
                 </tr>
@@ -403,6 +404,11 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
                             </div>
                           </td>
                           <td>
+                            <span style={{ fontSize: '14px', color: 'var(--ink-muted)', fontWeight: 500 }}>
+                              {invoice.user?.fullName || invoice.user?.username || '—'}
+                            </span>
+                          </td>
+                          <td>
                             <input type="date" className="hist-inline-input" value={editForm.notaryDate}
                               onChange={(e) => setEditForm({ ...editForm, notaryDate: e.target.value })} />
                           </td>
@@ -464,6 +470,11 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
                                 </button>
                               </div>
                             )}
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: 500, color: 'var(--ink)' }}>
+                              {invoice.user?.fullName || invoice.user?.username || '—'}
+                            </span>
                           </td>
                           <td className="hist-td-date">
                             {new Date(invoice.notaryDate).toLocaleDateString('vi-VN')}
