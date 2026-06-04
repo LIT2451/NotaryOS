@@ -45,7 +45,7 @@ public class InvoicesControllerTests
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var returnedInvoice = Assert.IsType<Invoice>(okResult.Value);
-        Assert.Equal("HD-001", returnedInvoice.InvoiceNumber);
+        Assert.Equal($"CC-{currentYear}-000002", returnedInvoice.InvoiceNumber);
     }
 
     [Fact]
