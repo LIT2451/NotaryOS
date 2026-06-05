@@ -215,7 +215,7 @@ public class InvoicesController : ControllerBase
 
         if (!canViewAll)
         {
-            query = query.Where(i => i.CreatedBy == userId);
+            query = query.Where(i => i.CreatedBy == userId || i.IsDeleted);
         }
 
         if (startDate.HasValue)

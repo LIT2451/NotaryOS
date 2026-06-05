@@ -558,6 +558,57 @@ public class InvoicesControllerTests
         Assert.Equal($"CC-{currentYear}-000002", nextNumber);
     }
 
+    [Fact]
+    public async Task GetInvoices_StaffCanViewOwnActiveInvoicesAndAllDeletedInvoices()
+    {
+        await using var dbContext = BuildContext(nameof(GetInvoices_StaffCanViewOwnActiveInvoicesAndAllDeletedInvoices));
+        SeedDefaults(dbContext);
+
+        // Invoice 1: Active, created by staff (userId = 2)
+        dbContext.Invoices.Add(new Invoice
+        {
+            Id = 101,
+            InvoiceNumber = "CC-2026-000001",
+            ClientName = "Own Client",
+            CreatedBy = 2,
+            IsDeleted = false
+        });
+
+        // Invoice 2: Active, created by another user (userId = 3)
+        dbContext.Invoices.Add(new Invoice
+        {
+            Id = 102,
+            InvoiceNumber = "CC-2026-000002",
+            ClientName = "Other Client Active",
+            CreatedBy = 3,
+            IsDeleted = false
+        });
+
+        // Invoice 3: Deleted, created by another user (userId = 3)
+        dbContext.Invoices.Add(new Invoice
+        {
+            Id = 103,
+            InvoiceNumber = "CC-2026-000003",
+            ClientName = "Other Client Deleted",
+            CreatedBy = 3,
+            IsDeleted = true
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        var controller = BuildController(dbContext, userId: 2, role: "Staff");
+
+        var result = await controller.GetInvoices(null, null);
+        var invoices = Assert.IsAssignableFrom<IEnumerable<Invoice>>(result.Value);
+        var invoiceList = invoices.ToList();
+
+        // Should return 2 invoices: own active (101) and other's deleted (103)
+        Assert.Equal(2, invoiceList.Count);
+        Assert.Contains(invoiceList, i => i.Id == 101);
+        Assert.Contains(invoiceList, i => i.Id == 103);
+        Assert.DoesNotContain(invoiceList, i => i.Id == 102);
+    }
+
     private static AppDbContext BuildContext(string databaseName)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
