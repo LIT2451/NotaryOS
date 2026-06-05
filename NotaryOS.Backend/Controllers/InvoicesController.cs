@@ -306,6 +306,14 @@ public class InvoicesController : ControllerBase
                 invoiceNumber = await GenerateInvoiceNumberAsync(yearPrefix, digitCount);
             }
 
+            var duplicateRecord = await _context.Invoices
+                .FirstOrDefaultAsync(i => i.InvoiceNumber == invoiceNumber);
+            if (duplicateRecord != null && duplicateRecord.IsDeleted)
+            {
+                _context.Invoices.Remove(duplicateRecord);
+                await _context.SaveChangesAsync();
+            }
+
             invoice = new Invoice
             {
                 InvoiceNumber = invoiceNumber,
@@ -369,10 +377,21 @@ public class InvoicesController : ControllerBase
             return BadRequest("Không thể thay đổi loại dịch vụ (nhóm dịch vụ) của hóa đơn đã được tạo để đảm bảo tính nhất quán của mã hợp đồng.");
         }
 
-        var duplicated = await _context.Invoices.AnyAsync(i => i.InvoiceNumber == request.InvoiceNumber && i.Id != id);
-        if (duplicated)
+        var requestedNum = request.InvoiceNumber?.Trim() ?? string.Empty;
+        var existingRecord = await _context.Invoices
+            .FirstOrDefaultAsync(i => i.InvoiceNumber == requestedNum && i.Id != id);
+
+        if (existingRecord != null)
         {
-            return BadRequest("Số hóa đơn này đã tồn tại trong hệ thống.");
+            if (existingRecord.IsDeleted)
+            {
+                _context.Invoices.Remove(existingRecord);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                return BadRequest("Số hóa đơn này đã tồn tại trong hệ thống.");
+            }
         }
 
         var oldValues = new { invoice.InvoiceNumber, invoice.ClientName, invoice.ClientIdNumber, invoice.ClientEmail, invoice.Amount, invoice.ServiceTypeId, invoice.NotaryDate };
