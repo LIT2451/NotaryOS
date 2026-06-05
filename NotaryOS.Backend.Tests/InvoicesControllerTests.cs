@@ -150,9 +150,9 @@ public class InvoicesControllerTests
     }
 
     [Fact]
-    public async Task PostInvoice_DoesNotFillGapsAndUsesMaxPlusOne()
+    public async Task PostInvoice_FillsGapsAndReusesMissingNumbers()
     {
-        await using var dbContext = BuildContext(nameof(PostInvoice_DoesNotFillGapsAndUsesMaxPlusOne));
+        await using var dbContext = BuildContext(nameof(PostInvoice_FillsGapsAndReusesMissingNumbers));
         
         var currentYear = DateTime.Now.Year;
         dbContext.ServiceTypes.Add(new ServiceType
@@ -196,8 +196,8 @@ public class InvoicesControllerTests
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var returnedInvoice = Assert.IsType<Invoice>(okResult.Value);
-        // Kiểm tra xem thuật toán có dùng số 4 (Max + 1) thay vì lấp vào số 2 bị khuyết hay không
-        Assert.Equal($"SY-{currentYear}-{DateTime.Now:ddMM}-004", returnedInvoice.InvoiceNumber);
+        // Kiểm tra xem thuật toán có lấp vào số 2 bị khuyết hay không
+        Assert.Equal($"SY-{currentYear}-{DateTime.Now:ddMM}-002", returnedInvoice.InvoiceNumber);
     }
 
     [Fact]
@@ -519,11 +519,11 @@ public class InvoicesControllerTests
 
         var currentYear = DateTime.Now.Year;
 
-        // Add active invoice CC-2026-000002
+        // Add active invoice CC-2026-000001
         dbContext.Invoices.Add(new Invoice
         {
-            InvoiceNumber = $"CC-{currentYear}-000002",
-            ClientName = "Client 2",
+            InvoiceNumber = $"CC-{currentYear}-000001",
+            ClientName = "Client 1",
             Amount = 100000,
             ServiceTypeId = 1,
             CreatedBy = 2,
@@ -531,11 +531,11 @@ public class InvoicesControllerTests
             IsDeleted = false
         });
 
-        // Add soft-deleted invoice CC-2026-000011 (IsDeleted = true)
+        // Add soft-deleted invoice CC-2026-000002 (IsDeleted = true)
         dbContext.Invoices.Add(new Invoice
         {
-            InvoiceNumber = $"CC-{currentYear}-000011",
-            ClientName = "Client 11",
+            InvoiceNumber = $"CC-{currentYear}-000002",
+            ClientName = "Client 2",
             Amount = 100000,
             ServiceTypeId = 1,
             CreatedBy = 2,
@@ -554,8 +554,8 @@ public class InvoicesControllerTests
         var nextNumberProp = okResult.Value?.GetType().GetProperty("nextNumber");
         var nextNumber = nextNumberProp?.GetValue(okResult.Value) as string;
 
-        // Since 11 is soft-deleted, the max active is 2, so the next generated number should be 3!
-        Assert.Equal($"CC-{currentYear}-000003", nextNumber);
+        // Since 2 is soft-deleted, the next generated number should reuse 2 (CC-2026-000002)
+        Assert.Equal($"CC-{currentYear}-000002", nextNumber);
     }
 
     private static AppDbContext BuildContext(string databaseName)

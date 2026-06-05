@@ -548,8 +548,12 @@ public class InvoicesController : ControllerBase
             .Where(n => n > 0)
             .ToList();
 
-        int maxNumber = usedNumbers.Any() ? usedNumbers.Max() : 0;
-        int nextNumber = maxNumber + 1;
+        var usedSet = new HashSet<int>(usedNumbers);
+        int nextNumber = 1;
+        while (usedSet.Contains(nextNumber))
+        {
+            nextNumber++;
+        }
 
         string format = new string('0', digitCount);
         return $"{yearPrefix}{nextNumber.ToString(format)}";
