@@ -551,12 +551,14 @@ public class InvoicesController : ControllerBase
 
     private async Task<string> GenerateInvoiceNumberAsync(string yearPrefix, int digitCount)
     {
-        var existingNumbers = await _context.Invoices
-            .Where(i => i.InvoiceNumber.StartsWith(yearPrefix) && !i.IsDeleted)
+        string format = new string('0', digitCount);
+
+        var deletedNumbers = await _context.Invoices
+            .Where(i => i.InvoiceNumber.StartsWith(yearPrefix) && i.IsDeleted)
             .Select(i => i.InvoiceNumber)
             .ToListAsync();
 
-        var usedNumbers = existingNumbers
+        var parsedDeleted = deletedNumbers
             .Select(n => {
                 var parts = n.Split('-');
                 var lastPart = parts.LastOrDefault();
@@ -567,14 +569,34 @@ public class InvoicesController : ControllerBase
             .Where(n => n > 0)
             .ToList();
 
-        var usedSet = new HashSet<int>(usedNumbers);
-        int nextNumber = 1;
-        while (usedSet.Contains(nextNumber))
+        if (parsedDeleted.Any())
         {
-            nextNumber++;
+            int minDeleted = parsedDeleted.Min();
+            return $"{yearPrefix}{minDeleted.ToString(format)}";
         }
 
-        string format = new string('0', digitCount);
+        var activeNumbers = await _context.Invoices
+            .Where(i => i.InvoiceNumber.StartsWith(yearPrefix) && !i.IsDeleted)
+            .Select(i => i.InvoiceNumber)
+            .ToListAsync();
+
+        var parsedActive = activeNumbers
+            .Select(n => {
+                var parts = n.Split('-');
+                var lastPart = parts.LastOrDefault();
+                if (lastPart != null && int.TryParse(lastPart, out int num))
+                    return num;
+                return 0;
+            })
+            .Where(n => n > 0)
+            .ToList();
+
+        int nextNumber = 1;
+        if (parsedActive.Any())
+        {
+            nextNumber = parsedActive.Max() + 1;
+        }
+
         return $"{yearPrefix}{nextNumber.ToString(format)}";
     }
 }

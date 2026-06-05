@@ -150,9 +150,9 @@ public class InvoicesControllerTests
     }
 
     [Fact]
-    public async Task PostInvoice_FillsGapsAndReusesMissingNumbers()
+    public async Task PostInvoice_FillsGapsAndReusesDeletedNumbers()
     {
-        await using var dbContext = BuildContext(nameof(PostInvoice_FillsGapsAndReusesMissingNumbers));
+        await using var dbContext = BuildContext(nameof(PostInvoice_FillsGapsAndReusesDeletedNumbers));
         
         var currentYear = DateTime.Now.Year;
         dbContext.ServiceTypes.Add(new ServiceType
@@ -162,7 +162,7 @@ public class InvoicesControllerTests
             TypeName = "Sao y bản chính"
         });
         
-        // Chèn số 1 và số 3, để khuyết số 2
+        // Chèn số 1 và số 3 (active), số 2 (deleted)
         dbContext.Invoices.Add(new Invoice
         {
             InvoiceNumber = $"SY-{currentYear}-{DateTime.Now:ddMM}-001",
@@ -171,6 +171,16 @@ public class InvoicesControllerTests
             ServiceTypeId = 99,
             CreatedBy = 2,
             NotaryDate = DateTime.UtcNow
+        });
+        dbContext.Invoices.Add(new Invoice
+        {
+            InvoiceNumber = $"SY-{currentYear}-{DateTime.Now:ddMM}-002",
+            ClientName = "Client 2 Deleted",
+            Amount = 10000,
+            ServiceTypeId = 99,
+            CreatedBy = 2,
+            NotaryDate = DateTime.UtcNow,
+            IsDeleted = true
         });
         dbContext.Invoices.Add(new Invoice
         {
@@ -196,8 +206,59 @@ public class InvoicesControllerTests
 
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         var returnedInvoice = Assert.IsType<Invoice>(okResult.Value);
-        // Kiểm tra xem thuật toán có lấp vào số 2 bị khuyết hay không
+        // Kiểm tra xem thuật toán có lấp vào số 2 bị xoá hay không
         Assert.Equal($"SY-{currentYear}-{DateTime.Now:ddMM}-002", returnedInvoice.InvoiceNumber);
+    }
+
+    [Fact]
+    public async Task PostInvoice_DoesNotReuseMissingNumbersIfNotDeleted()
+    {
+        await using var dbContext = BuildContext(nameof(PostInvoice_DoesNotReuseMissingNumbersIfNotDeleted));
+        
+        var currentYear = DateTime.Now.Year;
+        dbContext.ServiceTypes.Add(new ServiceType
+        {
+            Id = 99,
+            Category = "SaoY",
+            TypeName = "Sao y bản chính"
+        });
+        
+        // Chèn số 1 và số 3 (active), khuyết số 2 (chưa từng được đánh hoặc bị xoá)
+        dbContext.Invoices.Add(new Invoice
+        {
+            InvoiceNumber = $"SY-{currentYear}-{DateTime.Now:ddMM}-001",
+            ClientName = "Client 1",
+            Amount = 10000,
+            ServiceTypeId = 99,
+            CreatedBy = 2,
+            NotaryDate = DateTime.UtcNow
+        });
+        dbContext.Invoices.Add(new Invoice
+        {
+            InvoiceNumber = $"SY-{currentYear}-{DateTime.Now:ddMM}-003",
+            ClientName = "Client 3",
+            Amount = 10000,
+            ServiceTypeId = 99,
+            CreatedBy = 2,
+            NotaryDate = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = BuildController(dbContext, userId: 2, role: "Staff");
+
+        var result = await controller.PostInvoice(new CreateInvoiceRequest
+        {
+            InvoiceNumber = "",
+            ClientName = "Max Client",
+            Amount = 50000,
+            ServiceTypeId = 99,
+            NotaryDate = DateTime.UtcNow
+        }, null, null);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var returnedInvoice = Assert.IsType<Invoice>(okResult.Value);
+        // Khi không có số 2 bị xoá, thuật toán phải lấy Max + 1 = 4
+        Assert.Equal($"SY-{currentYear}-{DateTime.Now:ddMM}-004", returnedInvoice.InvoiceNumber);
     }
 
     [Fact]
