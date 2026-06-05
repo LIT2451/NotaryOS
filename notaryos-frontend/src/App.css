@@ -35,7 +35,7 @@
   --radius-pill: 9999px;
   
   --nav-height: 72px;
-  --max-width: 1200px;
+  --max-width: 1600px;
   
   /* --- Transitions --- */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -2424,7 +2424,7 @@ select.dash-date-input {
 
 /* Audit Log Styling */
 .audit-page-container {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding-bottom: 60px;
 }

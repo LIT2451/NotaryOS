@@ -99,7 +99,7 @@ public static class DbSeeder
             // Nếu vai trò khác (như Staff, Manager) và đang trống quyền, gán các quyền cơ bản
             else if (!role.RolePermissions.Any())
             {
-                var staffPermissions = new List<string> { "Invoices.View", "Invoices.Create", "Invoices.Edit", "Invoices.Export", "Stats.View" };
+                var staffPermissions = new List<string> { "Invoices.View", "Invoices.Create", "Invoices.Edit", "Invoices.Delete", "Invoices.Export", "Stats.View" };
                 
                 if (role.Id == 3 || role.RoleName == "Manager")
                 {

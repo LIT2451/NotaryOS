@@ -424,7 +424,7 @@ public class InvoicesController : ControllerBase
 
         if (!canDeleteAll && invoice.CreatedBy != userId)
         {
-            return Forbid("Bạn không có quyền xóa hóa đơn của người khác.");
+            return StatusCode(403, "Bạn không có quyền xóa hóa đơn của người khác.");
         }
 
         var oldValues = new { invoice.InvoiceNumber, invoice.ClientName, invoice.ClientIdNumber, invoice.ClientEmail, invoice.Amount, invoice.ServiceTypeId, invoice.NotaryDate };

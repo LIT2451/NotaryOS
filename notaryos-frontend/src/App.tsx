@@ -240,7 +240,9 @@ function App() {
       }
 
       const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5202/api';
-      const hubUrl = apiBase.replace(/\/api$/, '') + '/invoiceHub';
+      const hubUrl = apiBase.startsWith('http')
+        ? apiBase.replace(/\/api$/, '') + '/invoiceHub'
+        : apiBase.replace(/\/$/, '') + '/invoiceHub';
 
       const connection = new HubConnectionBuilder()
         .withUrl(hubUrl)
