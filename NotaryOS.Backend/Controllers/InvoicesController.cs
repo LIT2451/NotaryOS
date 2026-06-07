@@ -405,6 +405,12 @@ public class InvoicesController : ControllerBase
         invoice.BankName = request.BankName?.Trim();
         invoice.BankAccount = request.BankAccount?.Trim();
         invoice.NotaryDate = request.NotaryDate ?? invoice.NotaryDate;
+
+        if (invoice.IsDeleted)
+        {
+            invoice.CreatedBy = userId;
+        }
+
         invoice.IsDeleted = false;
         invoice.UpdatedAt = DateTime.Now;
 

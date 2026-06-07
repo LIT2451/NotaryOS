@@ -531,6 +531,7 @@ public class InvoicesControllerTests
         Assert.False(restored.IsDeleted);
         Assert.Equal("Restored By Other Client", restored.ClientName);
         Assert.Equal(500000, restored.Amount);
+        Assert.Equal(20, restored.CreatedBy);
     }
 
     [Fact]
