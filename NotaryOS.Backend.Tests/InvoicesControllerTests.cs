@@ -497,6 +497,43 @@ public class InvoicesControllerTests
     }
 
     [Fact]
+    public async Task PutInvoice_OnSoftDeletedInvoice_AllowsOtherUsersToEdit()
+    {
+        await using var dbContext = BuildContext(nameof(PutInvoice_OnSoftDeletedInvoice_AllowsOtherUsersToEdit));
+        SeedDefaults(dbContext);
+
+        dbContext.Invoices.Add(new Invoice
+        {
+            InvoiceNumber = "HD-RESTORE-OTHER",
+            ClientName = null,
+            Amount = 0,
+            ServiceTypeId = 1,
+            CreatedBy = 5,
+            NotaryDate = DateTime.UtcNow,
+            IsDeleted = true
+        });
+        await dbContext.SaveChangesAsync();
+
+        var invoiceId = await dbContext.Invoices.Select(x => x.Id).FirstAsync();
+        var controller = BuildController(dbContext, userId: 20, role: "Staff"); // Different user (20 != 5)
+
+        var result = await controller.PutInvoice(invoiceId, new UpdateInvoiceRequest
+        {
+            InvoiceNumber = "HD-RESTORE-OTHER",
+            ClientName = "Restored By Other Client",
+            Amount = 500000,
+            ServiceTypeId = 1,
+            NotaryDate = DateTime.UtcNow
+        }, null, null);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var restored = Assert.IsType<Invoice>(okResult.Value);
+        Assert.False(restored.IsDeleted);
+        Assert.Equal("Restored By Other Client", restored.ClientName);
+        Assert.Equal(500000, restored.Amount);
+    }
+
+    [Fact]
     public async Task PutInvoice_WithDifferentServiceCategory_ReturnsBadRequest()
     {
         await using var dbContext = BuildContext(nameof(PutInvoice_WithDifferentServiceCategory_ReturnsBadRequest));

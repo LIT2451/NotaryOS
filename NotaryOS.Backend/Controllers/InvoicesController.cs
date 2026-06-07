@@ -360,7 +360,7 @@ public class InvoicesController : ControllerBase
             return NotFound("Không tìm thấy hóa đơn.");
         }
 
-        if (!canEditAll && invoice.CreatedBy != userId)
+        if (!canEditAll && invoice.CreatedBy != userId && !invoice.IsDeleted)
         {
             return Forbid();
         }
