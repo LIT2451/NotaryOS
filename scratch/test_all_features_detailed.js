@@ -175,6 +175,58 @@ async function runTests() {
     invoiceCNumber = invC.invoiceNumber;
     console.log(`  👉 Hợp đồng C: ID = ${invoiceCId}, Số HD = ${invoiceCNumber}`);
 
+    // KIỂM TRA KHỞI TẠO SỐ HỢP ĐỒNG (JUMP INITIALIZATION)
+    const customInitNumber = `CC-${new Date().getFullYear()}-000999`;
+    
+    // Kiểm tra tính khả dụng của số khởi tạo này
+    const checkInitRes = await fetch(`${API_BASE}/invoices/check-number?invoiceNumber=${customInitNumber}`, {
+      headers: { 'Authorization': `Bearer ${tokens.staffA}` }
+    });
+    assertStatus(checkInitRes, 200, 'Kiểm tra tính khả dụng của số hợp đồng khởi tạo mới');
+    const initCheckData = await checkInitRes.json();
+    if (!initCheckData.exists) {
+      console.log(`  ✅ Số hợp đồng ${customInitNumber} sẵn sàng để khởi tạo.`);
+    } else {
+      console.log(`  ❌ Số hợp đồng ${customInitNumber} đã tồn tại trong hệ thống.`);
+    }
+
+    // Tiến hành khởi tạo hợp đồng bằng số tự nhập này
+    const formInit = new FormData();
+    formInit.append('invoiceNumber', customInitNumber);
+    formInit.append('clientName', 'Khách hàng Khởi Tạo');
+    formInit.append('amount', '500000');
+    formInit.append('serviceTypeId', '1');
+    formInit.append('notaryDate', new Date().toISOString().split('T')[0]);
+
+    const createInitRes = await fetch(`${API_BASE}/invoices`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${tokens.staffA}`
+      },
+      body: formInit
+    });
+    assertStatus(createInitRes, 200, 'Staff A khởi tạo hợp đồng mới với số tự nhập (Jump Initialization)');
+    const invInit = await createInitRes.json();
+    console.log(`  👉 Hợp đồng Khởi Tạo: ID = ${invInit.id}, Số HD = ${invInit.invoiceNumber}`);
+    if (invInit.invoiceNumber === customInitNumber) {
+      console.log('  ✅ [PASS] Khởi tạo số hợp đồng thành công! Số tự nhập được chấp nhận.');
+    } else {
+      console.log(`  ❌ [FAIL] Khởi tạo thất bại. Hệ thống tự gán số: ${invInit.invoiceNumber}`);
+    }
+
+    // Đảm bảo số tự sinh tiếp theo bắt đầu tăng từ số khởi tạo này
+    const nextNumberResAfterInit = await fetch(`${API_BASE}/invoices/next-number?serviceTypeId=1`, {
+      headers: { 'Authorization': `Bearer ${tokens.staffA}` }
+    });
+    const nextNumAfterInitData = await nextNumberResAfterInit.json();
+    const expectedNextNumber = `CC-${new Date().getFullYear()}-001000`;
+    console.log(`  👉 Số tiếp theo do hệ thống gợi ý: ${nextNumAfterInitData.nextNumber}`);
+    if (nextNumAfterInitData.nextNumber === expectedNextNumber) {
+      console.log('  ✅ [PASS] Số tự sinh tiếp theo tăng tiến chính xác từ số khởi tạo!');
+    } else {
+      console.log(`  ❌ [FAIL] Số tự sinh tiếp theo bị sai. Gợi ý: ${nextNumAfterInitData.nextNumber}, Kỳ vọng: ${expectedNextNumber}`);
+    }
+
     // Kiểm tra trùng số hợp đồng (CheckInvoiceNumber)
     const checkRes = await fetch(`${API_BASE}/invoices/check-number?invoiceNumber=${invoiceANumber}`, {
       headers: { 'Authorization': `Bearer ${tokens.staffA}` }
@@ -258,6 +310,38 @@ async function runTests() {
       console.log('  ✅ [PASS] Phân quyền hiển thị số trống hoạt động hoàn hảo! Nhân viên xem được số trống của người khác nhưng không xem được số hoạt động.');
     } else {
       console.log('  ❌ [FAIL] Phân quyền hiển thị số trống chưa đúng.');
+    }
+
+    // KIỂM TRA: ÔNG B SỬA HỢP ĐỒNG ĐÃ XOÁ CỦA ÔNG A THÌ PHẢI ĐỔI OWNER SANG ÔNG B
+    const getMeBRes = await fetch(`${API_BASE}/auth/me`, {
+      headers: { 'Authorization': `Bearer ${tokens.staffB}` }
+    });
+    const meBData = await getMeBRes.json();
+    const staffBUserId = meBData.id;
+
+    const editFormB = new FormData();
+    editFormB.append('invoiceNumber', invoiceBNumber);
+    editFormB.append('clientName', 'Khách hàng B - Khôi phục bởi Staff B');
+    editFormB.append('amount', '280000');
+    editFormB.append('serviceTypeId', '1');
+
+    const editResByB = await fetch(`${API_BASE}/invoices/${invoiceBId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${tokens.staffB}`
+      },
+      body: editFormB
+    });
+    assertStatus(editResByB, 200, 'Staff B chỉnh sửa và khôi phục hợp đồng đã xoá của Staff A');
+    const restoredInvoiceB = await editResByB.json();
+
+    console.log(`  👉 ID người khôi phục hợp đồng (Staff B): ${staffBUserId}`);
+    console.log(`  👉 CreatedBy thực tế của hợp đồng sau khi khôi phục: ${restoredInvoiceB.createdBy}`);
+
+    if (restoredInvoiceB.createdBy === staffBUserId) {
+      console.log('  ✅ [PASS] Cập nhật chủ sở hữu thành công! Hợp đồng đã xoá sau khi sửa đã đổi sang tên người sửa mới.');
+    } else {
+      console.log('  ❌ [FAIL] Chủ sở hữu vẫn giữ nguyên là người tạo ban đầu.');
     }
 
   } catch (err) {

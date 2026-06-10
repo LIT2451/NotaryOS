@@ -279,30 +279,29 @@ public class InvoicesController : ControllerBase
         try
         {
             string invoiceNumber;
+            var requestedNum = request.InvoiceNumber?.Trim();
 
-            bool hasAny = await _context.Invoices
-                .AnyAsync(i => i.InvoiceNumber.StartsWith(yearPrefix) && !i.IsDeleted);
-
-            // Chỉ cho phép dùng số do người dùng nhập nếu đây là hóa đơn ĐẦU TIÊN
-            // (trường hợp khởi tạo). Còn lại luôn tự sinh để tránh trùng lặp.
-            if (!hasAny && !string.IsNullOrWhiteSpace(request.InvoiceNumber))
+            if (!string.IsNullOrWhiteSpace(requestedNum) && requestedNum.StartsWith(yearPrefix))
             {
-                // Hóa đơn đầu tiên: dùng số người dùng nhập làm mốc khởi tạo
-                var requestedNum   = request.InvoiceNumber.Trim();
                 var existingRecord = await _context.Invoices
                     .FirstOrDefaultAsync(i => i.InvoiceNumber == requestedNum);
 
-                if (existingRecord != null && existingRecord.IsDeleted)
+                if (existingRecord == null || existingRecord.IsDeleted)
                 {
-                    _context.Invoices.Remove(existingRecord);
-                    await _context.SaveChangesAsync();
+                    if (existingRecord != null && existingRecord.IsDeleted)
+                    {
+                        _context.Invoices.Remove(existingRecord);
+                        await _context.SaveChangesAsync();
+                    }
+                    invoiceNumber = requestedNum;
                 }
-
-                invoiceNumber = requestedNum;
+                else
+                {
+                    invoiceNumber = await GenerateInvoiceNumberAsync(yearPrefix, digitCount);
+                }
             }
             else
             {
-                // Luôn tự sinh số — an toàn cho nhiều người nhập đồng thời
                 invoiceNumber = await GenerateInvoiceNumberAsync(yearPrefix, digitCount);
             }
 

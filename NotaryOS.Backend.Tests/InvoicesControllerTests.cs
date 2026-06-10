@@ -293,6 +293,41 @@ public class InvoicesControllerTests
     }
 
     [Fact]
+    public async Task PostInvoice_UsesProvidedInvoiceNumber_EvenWhenInvoicesAlreadyExist_IfNumberIsNotDuplicated()
+    {
+        await using var dbContext = BuildContext(nameof(PostInvoice_UsesProvidedInvoiceNumber_EvenWhenInvoicesAlreadyExist_IfNumberIsNotDuplicated));
+        SeedDefaults(dbContext);
+
+        var currentYear = DateTime.Now.Year;
+        dbContext.Invoices.Add(new Invoice
+        {
+            InvoiceNumber = $"CC-{currentYear}-000001",
+            ClientName = "Client 1",
+            Amount = 100000,
+            ServiceTypeId = 1,
+            CreatedBy = 2,
+            NotaryDate = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = BuildController(dbContext, userId: 2, role: "Staff");
+
+        var customNumber = $"CC-{currentYear}-000500";
+        var result = await controller.PostInvoice(new CreateInvoiceRequest
+        {
+            InvoiceNumber = customNumber,
+            ClientName = "Jump Client",
+            Amount = 200000,
+            ServiceTypeId = 1,
+            NotaryDate = DateTime.UtcNow
+        }, null, null);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var returnedInvoice = Assert.IsType<Invoice>(okResult.Value);
+        Assert.Equal(customNumber, returnedInvoice.InvoiceNumber);
+    }
+
+    [Fact]
     public async Task PostInvoice_SaoY_ResetsSequenceForNewDay()
     {
         await using var dbContext = BuildContext(nameof(PostInvoice_SaoY_ResetsSequenceForNewDay));
