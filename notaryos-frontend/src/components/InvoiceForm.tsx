@@ -92,15 +92,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, ha
     if (!createForm.serviceTypeId || createForm.serviceTypeId <= 0) return;
 
     const serviceTypeChanged = prevServiceTypeIdRef.current !== createForm.serviceTypeId;
-    
-    // Nếu đang trong chế độ khởi tạo số thủ công và loại dịch vụ chưa đổi, giữ nguyên số đó
-    if (isManualInit && !serviceTypeChanged) {
-      return;
-    }
 
-    // Nếu đổi loại dịch vụ, tắt chế độ khởi tạo thủ công
-    if (serviceTypeChanged && isManualInit && setIsManualInit) {
-      setIsManualInit(false);
+    // Khi đã khởi tạo thủ công, giữ nguyên số người dùng chọn và không bị
+    // ghi đè bởi lần sync loại dịch vụ đầu tiên khi chuyển từ trang init-number sang create.
+    if (isManualInit) {
+      prevServiceTypeIdRef.current = createForm.serviceTypeId;
+      setIsFirstInvoice(true);
+      return;
     }
 
     prevServiceTypeIdRef.current = createForm.serviceTypeId;
