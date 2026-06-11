@@ -44,9 +44,11 @@ type InvoiceFormProps = {
   banks?: any[];
   refreshTrigger?: number;
   userRole?: string;
+  isManualInit?: boolean;
+  setIsManualInit?: (val: boolean) => void;
 };
 
-const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, handleCreateInvoice, loading, serviceTypes, banks = [], refreshTrigger, userRole }) => {
+const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, handleCreateInvoice, loading, serviceTypes, banks = [], refreshTrigger, userRole, isManualInit, setIsManualInit }) => {
   const [idCardFrontImage, setIdCardFrontImage] = useState<string | null>(null);
   const [idCardBackImage, setIdCardBackImage] = useState<string | null>(null);
   
@@ -89,11 +91,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, ha
   useEffect(() => {
     if (!createForm.serviceTypeId || createForm.serviceTypeId <= 0) return;
 
-    // Nếu đã có invoiceNumber VÀ serviceTypeId chưa thay đổi VÀ không có refresh trigger mới
-    // thì bỏ qua (trường hợp khởi tạo số thủ công từ màn InitInvoiceNumber)
     const serviceTypeChanged = prevServiceTypeIdRef.current !== createForm.serviceTypeId;
-    if (createForm.invoiceNumber && !serviceTypeChanged && refreshTrigger === 0) {
+    
+    // Nếu đang trong chế độ khởi tạo số thủ công và loại dịch vụ chưa đổi, giữ nguyên số đó
+    if (isManualInit && !serviceTypeChanged) {
       return;
+    }
+
+    // Nếu đổi loại dịch vụ, tắt chế độ khởi tạo thủ công
+    if (serviceTypeChanged && isManualInit && setIsManualInit) {
+      setIsManualInit(false);
     }
 
     prevServiceTypeIdRef.current = createForm.serviceTypeId;
@@ -108,7 +115,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, ha
       })
       .catch(err => console.error('Error fetching next number:', err))
       .finally(() => setFetchingNumber(false));
-  }, [createForm.serviceTypeId, refreshTrigger]);
+  }, [createForm.serviceTypeId, refreshTrigger, isManualInit]);
 
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
@@ -163,7 +170,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, ha
       </select>
     )},
     { label: 'Số hợp đồng', required: true, node: (() => {
-      const isEditable = isFirstInvoice;
+      const isEditable = isFirstInvoice || !!isManualInit;
       return (
         <div style={{ position: 'relative' }}>
           <input

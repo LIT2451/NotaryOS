@@ -74,6 +74,9 @@ function App() {
   useEffect(() => {
     localStorage.setItem('activeTab', activeTab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (activeTab !== 'create' && activeTab !== 'init-number') {
+      setIsManualInit(false);
+    }
   }, [activeTab]);
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -93,6 +96,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isManualInit, setIsManualInit] = useState(false);
 
   const [authData, setAuthData] = useState({ username: '', password: '', fullName: '' });
 
@@ -400,6 +404,7 @@ function App() {
           ? `Số hợp đồng được cấp: ${assignedNumber}`
           : 'Hóa đơn mới đã được tạo thành công.'
       );
+      setIsManualInit(false);
 
       // Reset form — giữ lại serviceTypeId hiện tại để InvoiceForm tự fetch số tiếp theo
       const currentServiceTypeId = createForm.serviceTypeId;
@@ -613,6 +618,8 @@ function App() {
                   banks={banks}
                   refreshTrigger={refreshTrigger}
                   userRole={user?.role}
+                  isManualInit={isManualInit}
+                  setIsManualInit={setIsManualInit}
                 />
               )}
 
@@ -621,6 +628,7 @@ function App() {
                   setActiveTab={setActiveTab}
                   setCreateForm={setCreateForm}
                   refreshTrigger={refreshTrigger}
+                  setIsManualInit={setIsManualInit}
                 />
               )}
 

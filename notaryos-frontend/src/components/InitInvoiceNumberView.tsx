@@ -10,9 +10,10 @@ interface InitInvoiceNumberViewProps {
   setActiveTab: (tab: TabType) => void;
   setCreateForm: React.Dispatch<React.SetStateAction<InvoicePayload>>;
   refreshTrigger?: number;
+  setIsManualInit?: (val: boolean) => void;
 }
 
-const InitInvoiceNumberView: React.FC<InitInvoiceNumberViewProps> = ({ setActiveTab, setCreateForm, refreshTrigger }) => {
+const InitInvoiceNumberView: React.FC<InitInvoiceNumberViewProps> = ({ setActiveTab, setCreateForm, refreshTrigger, setIsManualInit }) => {
   const [serviceTypes, setServiceTypes] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<'CongChung' | 'ChungThuc' | 'SaoY'>('CongChung');
   const [selectedServiceTypeId, setSelectedServiceTypeId] = useState<number>(0);
@@ -84,6 +85,7 @@ const InitInvoiceNumberView: React.FC<InitInvoiceNumberViewProps> = ({ setActive
       invoiceNumber: invoiceNumber.trim(),
       serviceTypeId: selectedServiceTypeId > 0 ? selectedServiceTypeId : prev.serviceTypeId,
     }));
+    if (setIsManualInit) setIsManualInit(true);
     setActiveTab('create');
   };
 
