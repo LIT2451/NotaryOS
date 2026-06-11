@@ -176,8 +176,9 @@ async function runTests() {
     console.log(`  👉 Hợp đồng C: ID = ${invoiceCId}, Số HD = ${invoiceCNumber}`);
 
     // KIỂM TRA KHỞI TẠO SỐ HỢP ĐỒNG (JUMP INITIALIZATION)
-    const randomSuffix = Math.floor(Math.random() * 8000) + 1000; // e.g. 5432 (4 digits to avoid overflow)
-    const customInitNumber = `CC-${new Date().getFullYear()}-00${randomSuffix}`;
+    const parsedCNumber = parseInt(invoiceCNumber.split('-').pop(), 10);
+    const randomSuffix = parsedCNumber + 1000 + Math.floor(Math.random() * 100);
+    const customInitNumber = `CC-${new Date().getFullYear()}-${String(randomSuffix).padStart(6, '0')}`;
     
     // Kiểm tra tính khả dụng của số khởi tạo này
     const checkInitRes = await fetch(`${API_BASE}/invoices/check-number?invoiceNumber=${customInitNumber}`, {
@@ -220,7 +221,7 @@ async function runTests() {
       headers: { 'Authorization': `Bearer ${tokens.staffA}` }
     });
     const nextNumAfterInitData = await nextNumberResAfterInit.json();
-    const expectedNextNumber = `CC-${new Date().getFullYear()}-00${randomSuffix + 1}`;
+    const expectedNextNumber = `CC-${new Date().getFullYear()}-${String(randomSuffix + 1).padStart(6, '0')}`;
     console.log(`  👉 Số tiếp theo do hệ thống gợi ý: ${nextNumAfterInitData.nextNumber}`);
     if (nextNumAfterInitData.nextNumber === expectedNextNumber) {
       console.log('  ✅ [PASS] Số tự sinh tiếp theo tăng tiến chính xác từ số khởi tạo!');
