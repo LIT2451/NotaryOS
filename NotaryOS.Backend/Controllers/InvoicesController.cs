@@ -94,11 +94,19 @@ public class InvoicesController : ControllerBase
     [HasPermission("Invoices.Export")]
     public async Task<IActionResult> ExportToExcel([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
+        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
+
         var query = _context.Invoices
             .Include(i => i.ServiceType)
             .Include(i => i.User)
             .Where(i => !i.IsDeleted)
             .AsQueryable();
+
+        if (!canViewAll)
+        {
+            query = query.Where(i => i.CreatedBy == userId);
+        }
 
         if (startDate.HasValue)
         {
@@ -172,11 +180,19 @@ public class InvoicesController : ControllerBase
     [HasPermission("Invoices.Export")]
     public async Task<IActionResult> ExportToPdf([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
+        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
+
         var query = _context.Invoices
             .Include(i => i.ServiceType)
             .Include(i => i.User)
             .Where(i => !i.IsDeleted)
             .AsQueryable();
+
+        if (!canViewAll)
+        {
+            query = query.Where(i => i.CreatedBy == userId);
+        }
 
         if (startDate.HasValue)
         {
