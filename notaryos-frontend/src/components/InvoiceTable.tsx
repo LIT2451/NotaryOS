@@ -324,7 +324,7 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
                   const isEditing = editingInvoiceId === invoice.id;
                   const displayIndex = indexOfFirstItem + index + 1;
                   const isOwner = invoice.createdBy !== undefined && invoice.createdBy !== null && Number(invoice.createdBy) === Number(currentUserId);
-                  const canEdit = hasPermission('Invoices.EditAll') || hasPermission('Invoices.FullControl') || isOwner;
+                  const canEdit = hasPermission('Invoices.EditAll') || hasPermission('Invoices.FullControl') || isOwner || invoice.isDeleted;
                   const canDelete = hasPermission('Invoices.DeleteAll') || hasPermission('Invoices.FullControl') || isOwner;
 
                   return (
