@@ -74,9 +74,17 @@ const InitInvoiceNumberView: React.FC<InitInvoiceNumberViewProps> = ({ setActive
     }
   }, [invoiceNumber]);
 
-  const handleUseAutoNumber = () => {
-    setInvoiceNumber(autoSuggested);
-    setCheckStatus('idle');
+  const handleUseAutoNumber = async () => {
+    const trimmed = autoSuggested.trim();
+    if (!trimmed) return;
+    setInvoiceNumber(trimmed);
+    setCheckStatus('checking');
+    try {
+      const res = await checkInvoiceNumber(trimmed);
+      setCheckStatus(res.data.exists ? 'taken' : 'available');
+    } catch {
+      setCheckStatus('idle');
+    }
   };
 
   const handleUseAndCreate = () => {
