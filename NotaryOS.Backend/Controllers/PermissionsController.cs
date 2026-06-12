@@ -8,7 +8,7 @@ using NotaryOS.Backend.Filters;
 namespace NotaryOS.Backend.Controllers;
 
 [Authorize]
-[Route("api/[controller]")]
+[Route("[controller]")]
 [ApiController]
 public class PermissionsController : ControllerBase
 {

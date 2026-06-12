@@ -117,6 +117,8 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UsePathBase("/api");
+
 // Middleware thứ tự cực kỳ quan trọng
 app.UseCors("AllowAll");
 

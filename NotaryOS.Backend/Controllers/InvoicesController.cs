@@ -13,7 +13,7 @@ using System.Collections.Concurrent;
 namespace NotaryOS.Backend.Controllers;
 
 [Authorize]
-[Route("api/[controller]")]
+[Route("[controller]")]
 [ApiController]
 public class InvoicesController : ControllerBase
 {

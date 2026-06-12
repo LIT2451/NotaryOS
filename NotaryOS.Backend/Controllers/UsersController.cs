@@ -9,7 +9,7 @@ using NotaryOS.Backend.Filters;
 namespace NotaryOS.Backend.Controllers;
 
 [HasPermission("Users.Manage")]
-[Route("api/[controller]")]
+[Route("[controller]")]
 [ApiController]
 public class UsersController : ControllerBase
 {

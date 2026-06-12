@@ -10,7 +10,7 @@ using NotaryOS.Backend.Models;
 
 namespace NotaryOS.Backend.Controllers;
 
-[Route("api/[controller]")]
+[Route("[controller]")]
 [ApiController]
 public class AuthController : ControllerBase
 {

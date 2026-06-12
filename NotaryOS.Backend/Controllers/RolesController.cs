@@ -10,7 +10,7 @@ namespace NotaryOS.Backend.Controllers;
 
 [Authorize]
 [HasPermission("Roles.Manage")]
-[Route("api/[controller]")]
+[Route("[controller]")]
 [ApiController]
 public class RolesController : ControllerBase
 {

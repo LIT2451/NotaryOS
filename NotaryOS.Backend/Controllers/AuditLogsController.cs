@@ -8,7 +8,7 @@ using NotaryOS.Backend.Models;
 namespace NotaryOS.Backend.Controllers;
 
 [HasPermission("System.Manage")]
-[Route("api/[controller]")]
+[Route("[controller]")]
 [ApiController]
 public class AuditLogsController : ControllerBase
 {
