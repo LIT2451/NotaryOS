@@ -106,9 +106,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddCors(options =>
 {
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? new[] { "http://localhost:5173", "http://localhost:5174", "http://118.69.191.133", "http://congchungtanmai.io.vn", "https://congchungtanmai.io.vn" };
+
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://118.69.191.133", "http://congchungtanmai.io.vn", "https://congchungtanmai.io.vn")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
