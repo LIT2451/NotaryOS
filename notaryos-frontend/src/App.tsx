@@ -439,7 +439,7 @@ function App() {
       clientEmail: invoice.clientEmail || '',
       amount: invoice.amount,
       serviceTypeId: invoice.serviceTypeId,
-      notaryDate: toDateInputValue(new Date(invoice.notaryDate).toISOString()),
+      notaryDate: invoice.notaryDate ? invoice.notaryDate.toString().slice(0, 10) : toDateInputValue(),
       bankName: invoice.bankName || '',
       bankAccount: invoice.bankAccount || '',
     });
