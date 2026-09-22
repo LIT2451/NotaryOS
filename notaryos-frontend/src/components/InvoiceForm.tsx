@@ -239,10 +239,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ createForm, setCreateForm, ha
         className="underline-input" 
         value={createForm.amount === 0 ? '' : createForm.amount.toLocaleString('vi-VN')}
         onChange={(e) => {
-          const val = e.target.value.replace(/\./g, '');
-          if (val === '' || /^\d+$/.test(val)) {
-            setCreateForm({ ...createForm, amount: val === '' ? 0 : Number(val) });
-          }
+          const val = e.target.value.replace(/[^0-9]/g, '');
+          setCreateForm({ ...createForm, amount: val === '' ? 0 : Number(val) });
         }}
         placeholder="0" />
     )},

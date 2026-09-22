@@ -22,6 +22,14 @@ public class BanksController : ControllerBase
         _auditService = auditService;
     }
 
+    private int GetCurrentUserId()
+    {
+        var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("nameid")?.Value
+            ?? User.FindFirst("sub")?.Value;
+        return int.TryParse(idClaim, out var id) ? id : 0;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Bank>>> GetBanks()
     {
@@ -34,7 +42,7 @@ public class BanksController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Bank>> CreateBank(BankRequest request)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         
         if (string.IsNullOrWhiteSpace(request.BankName))
         {
@@ -60,7 +68,7 @@ public class BanksController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateBank(int id, BankRequest request)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         
         if (string.IsNullOrWhiteSpace(request.BankName))
         {
@@ -86,7 +94,7 @@ public class BanksController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteBank(int id)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         
         var bank = await _context.Banks.FindAsync(id);
         if (bank == null) return NotFound("Không tìm thấy ngân hàng.");

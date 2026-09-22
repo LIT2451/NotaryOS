@@ -244,10 +244,10 @@ function App() {
       }
 
       const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5202/api';
-      const hubBase = apiBase
-        .replace(/\/api\/api$/, '/api')
-        .replace(/\/api$/, '');
-      const hubUrl = hubBase.replace(/\/$/, '') + '/invoiceHub';
+      const normalizedBase = apiBase.replace(/\/+$/, '');
+      const hubUrl = normalizedBase.endsWith('/api')
+        ? `${normalizedBase}/invoiceHub`
+        : `${normalizedBase}/api/invoiceHub`;
 
       const connection = new HubConnectionBuilder()
         .withUrl(hubUrl)
@@ -663,7 +663,9 @@ function App() {
                 />
               )}
 
-              {activeTab === 'audit' && <AuditLogView />}
+              {activeTab === 'audit' && (hasPermission('System.Manage') ? <AuditLogView /> : (
+                <DashboardView stats={stats} prevStats={prevStats} invoices={invoices} startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} onExportExcel={hasPermission('Invoices.Export') ? handleExportExcel : undefined} onExportPdf={hasPermission('Invoices.Export') ? handleExportPdf : undefined} />
+              ))}
               {activeTab === 'profile' && <ProfileView />}
               {activeTab === 'accounts' && (hasPermission('Users.Manage') ? <UserManagementView /> : (
                 <DashboardView stats={stats} prevStats={prevStats} invoices={invoices} startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} onExportExcel={hasPermission('Invoices.Export') ? handleExportExcel : undefined} onExportPdf={hasPermission('Invoices.Export') ? handleExportPdf : undefined} />

@@ -22,6 +22,14 @@ public class UsersController : ControllerBase
         _auditService = auditService;
     }
 
+    private int GetCurrentUserId()
+    {
+        var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("nameid")?.Value
+            ?? User.FindFirst("sub")?.Value;
+        return int.TryParse(idClaim, out var id) ? id : 0;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<object>>> GetUsers()
     {
@@ -43,7 +51,7 @@ public class UsersController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(int id, UpdateUserRequest request)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         var user = await _context.Users.FindAsync(id);
         if (user == null) return NotFound("Không tìm thấy người dùng.");
 
@@ -69,7 +77,7 @@ public class UsersController : ControllerBase
     [HttpPut("{id}/reset-password")]
     public async Task<IActionResult> ResetPassword(int id)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         var user = await _context.Users.FindAsync(id);
         if (user == null) return NotFound("Không tìm thấy người dùng.");
 
@@ -85,7 +93,7 @@ public class UsersController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteUser(int id)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         
         if (adminId == id) return BadRequest("Bạn không thể tự xóa chính mình.");
 
@@ -106,7 +114,7 @@ public class UsersController : ControllerBase
     [HttpPut("{id}/toggle-lock")]
     public async Task<IActionResult> ToggleLock(int id)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         var user = await _context.Users.FindAsync(id);
         if (user == null) return NotFound("Không tìm thấy người dùng.");
         

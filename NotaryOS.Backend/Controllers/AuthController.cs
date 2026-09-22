@@ -25,24 +25,47 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
+    private int GetCurrentUserId()
+    {
+        var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("nameid")?.Value
+            ?? User.FindFirst("sub")?.Value;
+        return int.TryParse(idClaim, out var id) ? id : 0;
+    }
+
     [HttpPost("register")]
     public async Task<IActionResult> Register(UserDto request)
     {
         try 
         {
-            if (await _context.Users.AnyAsync(u => u.Username == request.Username))
+            if (string.IsNullOrWhiteSpace(request.Username))
+                return BadRequest("Tên đăng nhập không được để trống.");
+
+            var cleanUsername = request.Username.Trim();
+            if (await _context.Users.AnyAsync(u => u.Username == cleanUsername))
                 return BadRequest("Tên đăng nhập đã tồn tại.");
 
             var passwordError = ValidatePassword(request.Password);
             if (passwordError != null)
                 return BadRequest(passwordError);
 
+            // Ngăn chặn leo thang đặc quyền: chỉ Admin đã đăng nhập mới được gán RoleId khác Staff (2)
+            var canAssignRole = User.Identity?.IsAuthenticated == true && 
+                (User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == ClaimTypes.Role || c.Type == "role") && c.Value == "Admin"));
+
+            var targetRoleId = (canAssignRole && request.RoleId.HasValue) ? request.RoleId.Value : 2;
+
+            if (!await _context.Roles.AnyAsync(r => r.Id == targetRoleId))
+            {
+                targetRoleId = 2;
+            }
+
             var user = new User
             {
-                Username = request.Username,
+                Username = cleanUsername,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                FullName = request.FullName,
-                RoleId = request.RoleId ?? 2 // Mặc định là Staff
+                FullName = request.FullName?.Trim() ?? cleanUsername,
+                RoleId = targetRoleId
             };
 
             _context.Users.Add(user);
@@ -64,7 +87,7 @@ public class AuthController : ControllerBase
                 .Include(u => u.Role)
                 .ThenInclude(r => r!.RolePermissions)
                 .ThenInclude(rp => rp.Permission)
-                .FirstOrDefaultAsync(u => u.Username == request.Username);
+                .FirstOrDefaultAsync(u => u.Username == request.Username.Trim());
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return BadRequest("Sai tên đăng nhập hoặc mật khẩu.");
@@ -90,7 +113,7 @@ public class AuthController : ControllerBase
     [HttpGet("me"), Authorize]
     public async Task<IActionResult> GetMe()
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userId = GetCurrentUserId();
         var user = await _context.Users
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Id == userId);
@@ -109,7 +132,7 @@ public class AuthController : ControllerBase
     [HttpPut("profile"), Authorize]
     public async Task<IActionResult> UpdateProfile(UpdateProfileRequest request)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userId = GetCurrentUserId();
         var user = await _context.Users.FindAsync(userId);
         if (user == null) return NotFound();
 
@@ -122,7 +145,7 @@ public class AuthController : ControllerBase
     [HttpPut("change-password"), Authorize]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
     {
-        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userId = GetCurrentUserId();
         var user = await _context.Users.FindAsync(userId);
         if (user == null) return NotFound();
 
@@ -146,7 +169,9 @@ public class AuthController : ControllerBase
         var claims = new List<Claim> {
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "Staff")
+            new Claim(ClaimTypes.Role, user.Role?.RoleName ?? "Staff"),
+            new Claim("role", user.Role?.RoleName ?? "Staff"),
+            new Claim("nameid", user.Id.ToString())
         };
 
         var permissions = user.Role?.RolePermissions.Select(rp => rp.PermissionId).ToList() ?? new List<string>();
@@ -155,9 +180,15 @@ public class AuthController : ControllerBase
             claims.Add(new Claim("Permission", perm));
         }
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-            _configuration.GetSection("AppSettings:Token").Value!));
+        var jwtSecret = Environment.GetEnvironmentVariable("NOTARYOS_JWT_TOKEN")
+            ?? _configuration.GetSection("AppSettings:Token").Value;
 
+        if (string.IsNullOrWhiteSpace(jwtSecret))
+        {
+            throw new InvalidOperationException("Missing JWT token secret. Set NOTARYOS_JWT_TOKEN or AppSettings:Token.");
+        }
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
 
         var token = new JwtSecurityToken(

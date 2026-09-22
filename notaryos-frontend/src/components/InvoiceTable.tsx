@@ -383,10 +383,8 @@ const InvoiceTable: React.FC<InvoiceTableProps> = ({
                               style={{ textAlign: 'right', width: '120px' }}
                               value={editForm.amount === 0 ? '' : editForm.amount.toLocaleString('vi-VN')}
                               onChange={(e) => {
-                                const val = e.target.value.replace(/\./g, '');
-                                if (val === '' || /^\d+$/.test(val)) {
-                                  setEditForm({ ...editForm, amount: val === '' ? 0 : Number(val) });
-                                }
+                                const val = e.target.value.replace(/[^0-9]/g, '');
+                                setEditForm({ ...editForm, amount: val === '' ? 0 : Number(val) });
                               }} />
                           </td>
                           <td>

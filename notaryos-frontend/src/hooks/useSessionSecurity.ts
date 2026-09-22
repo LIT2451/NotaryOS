@@ -66,40 +66,25 @@ export function useSessionSecurity({ isLoggedIn, onLogout, onWarning }: UseSessi
     };
   }, [isLoggedIn, resetTimers, clearTimers]);
 
-  // Logout khi đóng tab (dùng visibilitychange + sessionStorage flag)
+  // Giữ trạng thái tab active
   useEffect(() => {
     if (!isLoggedIn) return;
 
-    // Đánh dấu tab đang active
+    // Đánh dấu tab đang active trong session
     sessionStorage.setItem('tab_active', '1');
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        // Tab bị ẩn/đóng - đánh dấu để kiểm tra
         sessionStorage.setItem('tab_active', '0');
       } else {
         sessionStorage.setItem('tab_active', '1');
       }
     };
 
-    const handleBeforeUnload = () => {
-      // Khi tab bị đóng hoàn toàn: xóa token khỏi sessionStorage
-      // localStorage vẫn giữ user info để hiển thị nhưng token bị xóa
-      sessionStorage.removeItem('token');
-    };
-
-    const handlePageHide = () => {
-      sessionStorage.removeItem('token');
-    };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('pagehide', handlePageHide);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('pagehide', handlePageHide);
     };
   }, [isLoggedIn]);
 }

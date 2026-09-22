@@ -30,7 +30,8 @@ public class HasPermissionFilter : IAuthorizationFilter
         }
 
         // Admin role bypasses all permission checks
-        if (context.HttpContext.User.IsInRole("Admin"))
+        if (context.HttpContext.User.IsInRole("Admin") || 
+            context.HttpContext.User.Claims.Any(c => (c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role") && c.Value == "Admin"))
         {
             return;
         }

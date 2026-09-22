@@ -45,7 +45,7 @@ const Navbar: React.FC<NavbarProps> = ({
     ...(hasPermission('Invoices.Create') ? [{ id: 'create', label: 'Nhập mới' }] : []),
     ...(userRole === 'Manager' || userRole === 'Admin' ? [{ id: 'init-number', label: 'Khởi tạo SHD' }] : []),
     ...(hasPermission('Invoices.View') ? [{ id: 'history', label: 'Lịch sử' }] : []),
-    ...(hasPermission('Invoices.ViewAll') ? [{ id: 'audit', label: 'Nhật ký' }] : []),
+    ...(hasPermission('System.Manage') ? [{ id: 'audit', label: 'Nhật ký' }] : []),
     ...(hasPermission('Users.Manage') ? [{ id: 'accounts', label: 'Tài khoản' }] : []),
     ...(hasPermission('ServiceTypes.Manage') ? [{ id: 'services', label: 'Dịch vụ' }] : []),
     ...(hasPermission('Banks.Manage') ? [{ id: 'banks', label: 'Ngân hàng' }] : []),

@@ -43,6 +43,14 @@ public class InvoicesController : ControllerBase
         _pdfService = pdfService;
     }
 
+    private int GetCurrentUserId()
+    {
+        var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("nameid")?.Value
+            ?? User.FindFirst("sub")?.Value;
+        return int.TryParse(idClaim, out var id) ? id : 0;
+    }
+
     [HttpGet("next-number")]
     public async Task<ActionResult> GetNextNumber([FromQuery] int serviceTypeId, [FromQuery] DateTime? notaryDate = null)
     {
@@ -94,8 +102,8 @@ public class InvoicesController : ControllerBase
     [HasPermission("Invoices.Export")]
     public async Task<IActionResult> ExportToExcel([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
-        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
+        var userId = GetCurrentUserId();
+        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role") && c.Value == "Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
 
         var query = _context.Invoices
             .Include(i => i.ServiceType)
@@ -180,8 +188,8 @@ public class InvoicesController : ControllerBase
     [HasPermission("Invoices.Export")]
     public async Task<IActionResult> ExportToPdf([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
-        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
+        var userId = GetCurrentUserId();
+        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role") && c.Value == "Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
 
         var query = _context.Invoices
             .Include(i => i.ServiceType)
@@ -221,8 +229,8 @@ public class InvoicesController : ControllerBase
     [HasPermission("Invoices.View")]
     public async Task<ActionResult<IEnumerable<Invoice>>> GetInvoices([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
-        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
+        var userId = GetCurrentUserId();
+        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role") && c.Value == "Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
 
         var query = _context.Invoices
             .Include(i => i.ServiceType)
@@ -231,7 +239,7 @@ public class InvoicesController : ControllerBase
 
         if (!canViewAll)
         {
-            query = query.Where(i => i.CreatedBy == userId || i.IsDeleted);
+            query = query.Where(i => i.CreatedBy == userId);
         }
 
         if (startDate.HasValue)
@@ -253,7 +261,7 @@ public class InvoicesController : ControllerBase
     [HasPermission("Invoices.Create")]
     public async Task<ActionResult<Invoice>> PostInvoice([FromForm] CreateInvoiceRequest request, IFormFile? idCardFront, IFormFile? idCardBack)
     {
-        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userId = GetCurrentUserId();
 
         var serviceType = await _context.ServiceTypes.FindAsync(request.ServiceTypeId);
         if (serviceType == null) return BadRequest("Loại dịch vụ không tồn tại.");
@@ -284,8 +292,15 @@ public class InvoicesController : ControllerBase
         // ── Bước 1: Upload ảnh TRƯỚC lock để không giữ lock quá lâu ──
         string? frontPath = null;
         string? backPath  = null;
-        if (idCardFront != null) frontPath = await SaveFileAsync(idCardFront);
-        if (idCardBack  != null) backPath  = await SaveFileAsync(idCardBack);
+        try
+        {
+            if (idCardFront != null) frontPath = await SaveFileAsync(idCardFront);
+            if (idCardBack  != null) backPath  = await SaveFileAsync(idCardBack);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         // ── Bước 2: Sinh số hợp đồng trong lock để tránh race condition ──
         //    Chỉ cho phép khởi tạo số thủ công nếu là hóa đơn đầu tiên (isFirst)
@@ -366,8 +381,8 @@ public class InvoicesController : ControllerBase
     [HasPermission("Invoices.Edit")]
     public async Task<ActionResult<Invoice>> PutInvoice(int id, [FromForm] UpdateInvoiceRequest request, IFormFile? idCardFront, IFormFile? idCardBack)
     {
-        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var canEditAll = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.FullControl" || c.Value == "Invoices.EditAll"));
+        var userId = GetCurrentUserId();
+        var canEditAll = User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role") && c.Value == "Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.FullControl" || c.Value == "Invoices.EditAll"));
 
         var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == id);
         if (invoice == null)
@@ -429,8 +444,15 @@ public class InvoicesController : ControllerBase
         invoice.IsDeleted = false;
         invoice.UpdatedAt = DateTime.Now;
 
-        if (idCardFront != null) invoice.IdCardFrontPath = await SaveFileAsync(idCardFront);
-        if (idCardBack != null) invoice.IdCardBackPath = await SaveFileAsync(idCardBack);
+        try
+        {
+            if (idCardFront != null) invoice.IdCardFrontPath = await SaveFileAsync(idCardFront);
+            if (idCardBack != null) invoice.IdCardBackPath = await SaveFileAsync(idCardBack);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         await _context.SaveChangesAsync();
         await _auditService.LogAsync(userId, "Updated", "Invoice", invoice.Id, oldValues, invoice);
@@ -453,8 +475,8 @@ public class InvoicesController : ControllerBase
     [HasPermission("Invoices.Delete")]
     public async Task<IActionResult> DeleteInvoice(int id)
     {
-        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var canDeleteAll = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.FullControl" || c.Value == "Invoices.DeleteAll"));
+        var userId = GetCurrentUserId();
+        var canDeleteAll = User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role") && c.Value == "Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.FullControl" || c.Value == "Invoices.DeleteAll"));
 
         var invoice = await _context.Invoices.FirstOrDefaultAsync(i => i.Id == id);
         if (invoice == null)
@@ -498,8 +520,8 @@ public class InvoicesController : ControllerBase
     [HasPermission("Stats.View")]
     public async Task<IActionResult> GetStats([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
-        var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => c.Type == "Permission" && c.Value == "Invoices.ViewAll");
+        var userId = GetCurrentUserId();
+        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role") && c.Value == "Admin") || User.Claims.Any(c => c.Type == "Permission" && c.Value == "Invoices.ViewAll");
 
         var query = _context.Invoices.Include(i => i.ServiceType).Where(i => !i.IsDeleted).AsQueryable();
 
@@ -554,12 +576,34 @@ public class InvoicesController : ControllerBase
         return _hubContext.Clients.All.SendAsync("ReceiveInvoiceUpdate", action, invoiceId);
     }
 
+    private static readonly HashSet<string> _allowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".webp"
+    };
+
     private async Task<string> SaveFileAsync(IFormFile file)
     {
+        if (file == null || file.Length == 0)
+        {
+            throw new ArgumentException("File tải lên không hợp lệ.");
+        }
+
+        // Giới hạn 10MB
+        if (file.Length > 10 * 1024 * 1024)
+        {
+            throw new ArgumentException("Dung lượng file không được vượt quá 10MB.");
+        }
+
+        var ext = Path.GetExtension(file.FileName);
+        if (string.IsNullOrEmpty(ext) || !_allowedExtensions.Contains(ext))
+        {
+            throw new ArgumentException("Chỉ chấp nhận file ảnh có định dạng .jpg, .jpeg, .png, .webp.");
+        }
+
         var uploadsRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "idcards");
         if (!Directory.Exists(uploadsRoot)) Directory.CreateDirectory(uploadsRoot);
 
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+        var fileName = $"{Guid.NewGuid()}{ext.ToLowerInvariant()}";
         var filePath = Path.Combine(uploadsRoot, fileName);
 
         using (var stream = new FileStream(filePath, FileMode.Create))

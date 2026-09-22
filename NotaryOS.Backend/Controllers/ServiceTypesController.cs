@@ -22,6 +22,14 @@ public class ServiceTypesController : ControllerBase
         _auditService = auditService;
     }
 
+    private int GetCurrentUserId()
+    {
+        var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("nameid")?.Value
+            ?? User.FindFirst("sub")?.Value;
+        return int.TryParse(idClaim, out var id) ? id : 0;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ServiceType>>> GetServiceTypes()
     {
@@ -34,7 +42,7 @@ public class ServiceTypesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ServiceType>> CreateServiceType(ServiceTypeRequest request)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         
         var serviceType = new ServiceType
         {
@@ -55,7 +63,7 @@ public class ServiceTypesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateServiceType(int id, ServiceTypeRequest request)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         
         var serviceType = await _context.ServiceTypes.FindAsync(id);
         if (serviceType == null) return NotFound("Không tìm thấy loại dịch vụ.");
@@ -76,7 +84,7 @@ public class ServiceTypesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteServiceType(int id)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
         
         var serviceType = await _context.ServiceTypes.FindAsync(id);
         if (serviceType == null) return NotFound("Không tìm thấy loại dịch vụ.");

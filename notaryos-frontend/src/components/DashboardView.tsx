@@ -136,10 +136,14 @@ const DashboardView: React.FC<DashboardViewProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  const chartData = invoices.slice(0, 12).reverse().map(inv => ({
-    name: inv.invoiceNumber,
-    amount: inv.amount
-  }));
+  const chartData = (invoices || [])
+    .filter(inv => !inv.isDeleted)
+    .slice(0, 12)
+    .reverse()
+    .map(inv => ({
+      name: inv.invoiceNumber,
+      amount: inv.amount
+    }));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

@@ -12,7 +12,6 @@ using QuestPDF.Infrastructure;
 using System.IdentityModel.Tokens.Jwt;
 
 QuestPDF.Settings.License = LicenseType.Community;
-JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -82,14 +81,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtToken)),
             ValidateIssuer = false,
-            ValidateAudience = false
+            ValidateAudience = false,
+            NameClaimType = System.Security.Claims.ClaimTypes.Name,
+            RoleClaimType = System.Security.Claims.ClaimTypes.Role
         };
         options.Events = new JwtBearerEvents
         {
             OnTokenValidated = async context =>
             {
                 var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-                var userIdClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var userIdClaim = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? context.Principal?.FindFirst("nameid")?.Value
+                    ?? context.Principal?.FindFirst("sub")?.Value;
                 if (int.TryParse(userIdClaim, out int userId))
                 {
                     // Lấy user trực tiếp không cần Include để tối ưu tốc độ

@@ -24,7 +24,8 @@ public static class DbSeeder
             new Permission { Id = "Users.Manage", PermissionName = "Quản lý nhân viên", Description = "Thêm, sửa, xóa, đặt lại mật khẩu nhân viên." },
             new Permission { Id = "Roles.Manage", PermissionName = "Quản lý vai trò", Description = "Quản lý Role và gán quyền." },
             new Permission { Id = "ServiceTypes.Manage", PermissionName = "Quản lý loại dịch vụ", Description = "Thêm, sửa, xóa loại dịch vụ." },
-            new Permission { Id = "Banks.Manage", PermissionName = "Quản lý ngân hàng", Description = "Thêm, sửa, xóa danh sách ngân hàng." }
+            new Permission { Id = "Banks.Manage", PermissionName = "Quản lý ngân hàng", Description = "Thêm, sửa, xóa danh sách ngân hàng." },
+            new Permission { Id = "System.Manage", PermissionName = "Quản lý hệ thống & Nhật ký", Description = "Xem nhật ký audit log của toàn hệ thống." }
         };
 
         // 1. Dọn dẹp: Xóa các quyền cũ không còn trong danh sách mới

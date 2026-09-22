@@ -23,6 +23,14 @@ public class RolesController : ControllerBase
         _auditService = auditService;
     }
 
+    private int GetCurrentUserId()
+    {
+        var idClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("nameid")?.Value
+            ?? User.FindFirst("sub")?.Value;
+        return int.TryParse(idClaim, out var id) ? id : 0;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<object>>> GetRoles()
     {
@@ -41,7 +49,7 @@ public class RolesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<object>> CreateRole(RoleRequest request)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
 
         if (string.IsNullOrWhiteSpace(request.RoleName))
         {
@@ -78,7 +86,7 @@ public class RolesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateRole(int id, RoleRequest request)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
 
         if (id == 1) // Ngăn cấm sửa role Admin mặc định nếu muốn
         {
@@ -125,7 +133,7 @@ public class RolesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteRole(int id)
     {
-        var adminId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var adminId = GetCurrentUserId();
 
         if (id == 1 || id == 2)
         {
