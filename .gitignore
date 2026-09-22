@@ -24,3 +24,7 @@ NotaryOS_Deploy.zip
 deploy/
 Deploy/
 *.zip
+publish/
+NotaryOS.Backend/publish/
+backups/
+

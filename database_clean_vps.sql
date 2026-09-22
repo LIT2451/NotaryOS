@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `Users` (
 
 -- Admin: 123456
 INSERT IGNORE INTO `Users` (`Id`, `Username`, `PasswordHash`, `FullName`, `RoleId`, `IsLocked`) 
-VALUES (1, 'admin', '$2a$11$K7pS9P6pZ0S6YpW6pZ0S6up.p.p.p.p.p.p.p.p.p.p.p.p.p.p.p', 'Quản trị viên', 1, 0);
+VALUES (1, 'admin', '$2a$11$aOLXdXyqjCKzxdvhwqaj/OUhyh.VA3M46ks.pRdExLA2B4sN9cfVe', 'Quản trị viên', 1, 0);
 
 -- 5. Table: ServiceTypes
 CREATE TABLE IF NOT EXISTS `ServiceTypes` (

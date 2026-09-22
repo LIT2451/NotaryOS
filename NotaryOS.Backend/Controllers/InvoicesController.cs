@@ -44,7 +44,7 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpGet("next-number")]
-    public async Task<ActionResult> GetNextNumber([FromQuery] int serviceTypeId)
+    public async Task<ActionResult> GetNextNumber([FromQuery] int serviceTypeId, [FromQuery] DateTime? notaryDate = null)
     {
         var serviceType = await _context.ServiceTypes.FindAsync(serviceTypeId);
         if (serviceType == null) return BadRequest("Loại dịch vụ không tồn tại.");
@@ -55,15 +55,15 @@ public class InvoicesController : ControllerBase
             "SaoY" => "SY",
             _ => "CC"
         };
-        var currentDate = DateTime.Now;
-        var currentYear = currentDate.Year;
+        var date = notaryDate ?? DateTime.Now;
+        var currentYear = date.Year;
         
         string yearPrefix;
         int digitCount = 6;
 
         if (prefix == "SY")
         {
-            yearPrefix = $"{prefix}-{currentYear}-{currentDate:ddMM}-";
+            yearPrefix = $"{prefix}-{currentYear}-{date:ddMM}-";
             digitCount = 3;
         }
         else
@@ -574,34 +574,12 @@ public class InvoicesController : ControllerBase
     {
         string format = new string('0', digitCount);
 
-        var deletedNumbers = await _context.Invoices
-            .Where(i => i.InvoiceNumber.StartsWith(yearPrefix) && i.IsDeleted)
+        var allNumbers = await _context.Invoices
+            .Where(i => i.InvoiceNumber.StartsWith(yearPrefix))
             .Select(i => i.InvoiceNumber)
             .ToListAsync();
 
-        var parsedDeleted = deletedNumbers
-            .Select(n => {
-                var parts = n.Split('-');
-                var lastPart = parts.LastOrDefault();
-                if (lastPart != null && int.TryParse(lastPart, out int num))
-                    return num;
-                return 0;
-            })
-            .Where(n => n > 0)
-            .ToList();
-
-        if (parsedDeleted.Any())
-        {
-            int minDeleted = parsedDeleted.Min();
-            return $"{yearPrefix}{minDeleted.ToString(format)}";
-        }
-
-        var activeNumbers = await _context.Invoices
-            .Where(i => i.InvoiceNumber.StartsWith(yearPrefix) && !i.IsDeleted)
-            .Select(i => i.InvoiceNumber)
-            .ToListAsync();
-
-        var parsedActive = activeNumbers
+        var parsedNumbers = allNumbers
             .Select(n => {
                 var parts = n.Split('-');
                 var lastPart = parts.LastOrDefault();
@@ -613,9 +591,9 @@ public class InvoicesController : ControllerBase
             .ToList();
 
         int nextNumber = 1;
-        if (parsedActive.Any())
+        if (parsedNumbers.Any())
         {
-            nextNumber = parsedActive.Max() + 1;
+            nextNumber = parsedNumbers.Max() + 1;
         }
 
         return $"{yearPrefix}{nextNumber.ToString(format)}";
