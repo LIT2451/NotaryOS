@@ -157,7 +157,9 @@ function App() {
         prevParams ? getStats(prevParams) : Promise.resolve({ data: null }),
         getBanks()
       ]);
-      setInvoices(Array.isArray(invRes.data) ? invRes.data : []);
+      // API now returns { data: Invoice[], pagination: {...} }
+      const invoiceList = Array.isArray(invRes.data) ? invRes.data : (invRes.data?.data ?? []);
+      setInvoices(invoiceList);
       setStats(statRes.data);
       setPrevStats(prevStatRes.data);
       setServiceTypes(Array.isArray(servRes.data) ? servRes.data : []);

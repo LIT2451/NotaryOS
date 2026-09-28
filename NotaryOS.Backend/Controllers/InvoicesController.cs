@@ -227,14 +227,25 @@ public class InvoicesController : ControllerBase
 
     [HttpGet]
     [HasPermission("Invoices.View")]
-    public async Task<ActionResult<IEnumerable<Invoice>>> GetInvoices([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
+    public async Task<ActionResult> GetInvoices(
+        [FromQuery] DateTime? startDate,
+        [FromQuery] DateTime? endDate,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
     {
+        // Giới hạn pageSize tối đa 200 để tránh response quá lớn
+        pageSize = Math.Clamp(pageSize, 1, 200);
+        page = Math.Max(1, page);
+
         var userId = GetCurrentUserId();
-        var canViewAll = User.IsInRole("Admin") || User.Claims.Any(c => (c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role") && c.Value == "Admin") || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
+        var canViewAll = User.IsInRole("Admin")
+            || User.Claims.Any(c => (c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role") && c.Value == "Admin")
+            || User.Claims.Any(c => c.Type == "Permission" && (c.Value == "Invoices.ViewAll" || c.Value == "Invoices.FullControl"));
 
         var query = _context.Invoices
             .Include(i => i.ServiceType)
             .Include(i => i.User)
+            .Where(i => !i.IsDeleted)
             .AsQueryable();
 
         if (!canViewAll)
@@ -254,7 +265,28 @@ public class InvoicesController : ControllerBase
             query = query.Where(i => i.NotaryDate <= end);
         }
 
-        return await query.OrderByDescending(i => i.CreatedAt).ToListAsync();
+        var totalCount = await query.CountAsync();
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        var items = await query
+            .OrderByDescending(i => i.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            data = items,
+            pagination = new
+            {
+                page,
+                pageSize,
+                totalCount,
+                totalPages,
+                hasNextPage = page < totalPages,
+                hasPrevPage = page > 1
+            }
+        });
     }
 
     [HttpPost]
