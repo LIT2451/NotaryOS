@@ -245,7 +245,6 @@ public class InvoicesController : ControllerBase
         var query = _context.Invoices
             .Include(i => i.ServiceType)
             .Include(i => i.User)
-            .Where(i => !i.IsDeleted)
             .AsQueryable();
 
         if (!canViewAll)
@@ -268,6 +267,7 @@ public class InvoicesController : ControllerBase
         var totalCount = await query.CountAsync();
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
+        // Lấy tất cả để frontend tự phân tab active/deleted (không lọc IsDeleted ở đây)
         var items = await query
             .OrderByDescending(i => i.CreatedAt)
             .Skip((page - 1) * pageSize)
